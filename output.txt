@@ -4,4 +4,18 @@ this one into the challenge website: gmpJPiyErvJM
 
 Executing self-test...
 
-jmp fails
+self-test complete, all tests pass
+The self-test completion code is: FZHeGMLDZwMy
+
+== Foothills ==
+You find yourself standing at the base of an enormous mountain.  At its base to the north, there is a massive doorway.  A sign nearby reads "Keep out!  Definitely no treasure within!"
+
+Things of interest here:
+- tablet
+
+There are 2 exits:
+- doorway
+- south
+
+What do you do?
+> 

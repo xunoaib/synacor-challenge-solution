@@ -9,6 +9,18 @@ class Opcode:
     id: int
     nargs: int
 
+    def __len__(self):
+        return 1 + self.nargs
+
+def load_bytecode(fname):
+    with open(fname, 'rb') as f:
+        data = f.read()
+
+    return [
+        int.from_bytes(data[i:i+WORD_BYTES], 'little')
+        for i in range(0, len(data), WORD_BYTES)
+    ]
+
 def parse_opcodes():
     with open('arch-spec') as f:
         data = f.read()
