@@ -1,0 +1,7 @@
+Welcome to the Synacor Challenge!
+Please record your progress by putting codes like
+this one into the challenge website: gmpJPiyErvJM
+
+Executing self-test...
+
+jmp fails
