@@ -1,11 +1,8 @@
-import ast
-import os
 import re
 import readline
-import sys
 from dataclasses import dataclass
 
-from debugger import exec_debug_cmd
+from debugger import debug_cmd
 
 @dataclass
 class Opcode:
@@ -205,10 +202,29 @@ class CPU:
                 a = to_register(a)
                 if not self.input_buffer:
                     cmd = input('> ')
+
                     # intercept special debug commands
-                    if cmd.startswith('!'):
-                        exec_debug_cmd(self, cmd[1:])
+                    if cmd.startswith('.'):
+                        debug_cmd(self, cmd[1:])
                         return True
+
+                    # command aliases
+                    aliases = {
+                        'l':'look',
+                        'n':'north',
+                        's':'south',
+                        'e':'east',
+                        'w':'west',
+                        'br':'bridge',
+                        'dw':'doorway',
+                        'dn':'down',
+                        'cn':'continue',
+                        'pa':'passage',
+                    }
+                    if newcmd := aliases.get(cmd):
+                        print(f'(aliased {cmd} => {newcmd})')
+                        cmd = newcmd
+
                     self.input_buffer = list(cmd + '\n')[::-1]
                 self.registers[a] = ord(self.input_buffer.pop())
 
