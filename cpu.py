@@ -1,8 +1,11 @@
+import ast
+import os
 import re
 import readline
 import sys
 from dataclasses import dataclass
 
+from debugger import exec_debug_cmd
 
 @dataclass
 class Opcode:
@@ -35,10 +38,6 @@ def load_bytecode(fname):
         for i in range(0, len(data), 2)
     ]
 
-def debug(*args, **kwargs):
-    if '-d' in sys.argv:
-        print(*args, **kwargs)
-
 def isreg(arg):
     return arg >= 32768
 
@@ -47,45 +46,57 @@ def to_register(arg):
         return arg - 32768
     return arg
 
+# def print_debug(*args, **kwargs):
+#     # if '-d' in sys.argv:
+#         print(*args, **kwargs)
+
+def read_instruction(memory, addr):
+    opid = memory[addr]
+    opcode = OPCODES[opid]
+    args = tuple(memory[addr+1:addr+1+opcode.nargs])
+    return opcode, args
+
+
 class CPU:
     def __init__(self):
-        self.memory = None
+        self.memory = []
         self.registers = [0] * 8
         self.stack = []
         self.pc = 0  # program counter
         self.input_buffer = []  # keyboard input
-        self.halted = False
+
+    def load_program(self, fname):
+        self.memory = load_bytecode(fname)
+        self.pc = 0
 
     def readvalue(self, arg):
         if isreg(arg):
             return self.registers[arg - 32768]
         return arg
 
-    def read_instruction(self, bytecode, addr):
-        opid = bytecode[addr]
-        opcode = OPCODES[opid]
-        args = tuple(bytecode[addr+1:addr+1+opcode.nargs])
-        return opcode, args
-
-    def run(self, fname='challenge.bin'):
-        self.memory = load_bytecode(fname)
-        self.pc = 0
-        while not self.halted:
-            self.step()
+    def run(self):
+        while self.step():
+            pass
 
     def step(self):
-        opcode, args = self.read_instruction(self.memory, self.pc)
+        opcode, args = read_instruction(self.memory, self.pc)
+        # self.print_debug(self.pc, opcode.name, args)
+        return self.execute(opcode, args)
+
+    def execute(self, opcode, args):
+        '''
+        Executes the given instruction, updates the program counter, and
+        returns true if the program has not halted.
+        '''
         nextpc = self.pc + len(opcode)
         a, b, c = args + (None,) * (3 - len(args))
-        debug(self.pc, opcode.name, args)
 
         match opcode.name:
             case 'noop':
                 pass
 
             case 'halt':
-                self.halted = True
-                return
+                return False
 
             case 'out':
                 a = self.readvalue(a)
@@ -183,8 +194,7 @@ class CPU:
             # remove the top element from the stack and jump to it; empty stack = halt
             case 'ret':
                 if not self.stack:
-                    self.halted = True
-                    return
+                    return False
                 nextpc = self.stack.pop()
 
             # read a character from the terminal and write its ascii code to <a>; it can
@@ -192,15 +202,40 @@ class CPU:
             # encountered; this means that you can safely read whole lines from the
             # keyboard and trust that they will be fully read
             case 'in':
-                # TODO: add hook/event
                 a = to_register(a)
                 if not self.input_buffer:
-                    self.input_buffer = list(input('> ') + '\n')[::-1]
+                    cmd = input('> ')
+                    # intercept special debug commands
+                    if cmd.startswith('!'):
+                        exec_debug_cmd(self, cmd[1:])
+                        return True
+                    self.input_buffer = list(cmd + '\n')[::-1]
                 self.registers[a] = ord(self.input_buffer.pop())
 
             case _:
                 print('unimplemented:', opcode, args)
-                self.halted = True
-                return
+                return False
 
         self.pc = nextpc
+        return True
+
+    def snapshot(self):
+        return {
+            'memory': self.memory,
+            'stack': self.stack,
+            'registers': self.registers,
+            'pc': self.pc,
+            'input_buffer': self.input_buffer,
+        }
+
+    def restore_snapshot(self, snapshot: dict):
+        for attrib in ['memory', 'stack', 'registers', 'pc', 'input_buffer']:
+            setattr(self, attrib, snapshot[attrib])
+
+    def __repr__(self):
+        return '\n'.join([
+            f'memory = {self.memory}',
+            f'stack = {self.memory}',
+            f'registers = {self.registers}',
+            f'pc = {self.pc}',
+        ])
