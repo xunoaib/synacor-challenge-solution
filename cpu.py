@@ -1,3 +1,4 @@
+import ast
 import re
 import readline
 from dataclasses import dataclass
@@ -43,10 +44,6 @@ def to_register(arg):
         return arg - 32768
     return arg
 
-# def print_debug(*args, **kwargs):
-#     # if '-d' in sys.argv:
-#         print(*args, **kwargs)
-
 def read_instruction(memory, addr):
     opid = memory[addr]
     opcode = OPCODES[opid]
@@ -77,7 +74,6 @@ class CPU:
 
     def step(self):
         opcode, args = read_instruction(self.memory, self.pc)
-        # self.print_debug(self.pc, opcode.name, args)
         return self.execute(opcode, args)
 
     def execute(self, opcode, args):
@@ -255,3 +251,8 @@ class CPU:
             f'registers = {self.registers}',
             f'pc = {self.pc}',
         ])
+
+    @staticmethod
+    def read_snapshot(fname):
+        with open(fname) as f:
+            return ast.literal_eval(f.read())

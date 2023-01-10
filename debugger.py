@@ -2,14 +2,13 @@ import ast
 from pathlib import Path
 from itertools import zip_longest
 
-# from cpu import CPU, read_instruction
-
 # TODO:
 # - wrap CPU.execute() to add pre/post hooks and callback conditions
 # - breakpoint on: address, instruction
 
 class Debugger:
-    pass
+    def __init__(self, cpu):
+        self.cpu = cpu
 
 def diff_snapshot(snap1, snap2):
     diff_result = {}
@@ -46,9 +45,9 @@ def debug_cmd(cpu, cmd):
             #     cpu.debug = val == 'on'
             #     print(f'set debug = {cpu.debug}')
 
-            case ['snap', *fname]:
+            case ['save', *fname]:
                 if not fname:
-                    fname = ['last.snapshot']
+                    fname = ['last']
                 directory.mkdir(exist_ok=True)
                 fname = directory / fname[0]
                 with open(fname, 'w') as f:
@@ -100,10 +99,17 @@ def debug_cmd(cpu, cmd):
                 nbytes = int(nbytes[0]) if nbytes else 1
                 print(cpu.stack[addr:addr+nbytes])
 
-            case ['dis', *fname]:
-                # write value to the STACK at address (0 = the bottom)
+            case ['pinv']:
+                for addr in range(2670, 2734+1, 4):
+                    print(addr, cpu.memory[addr:addr+4])
+
+            case ['dis', addr]:
                 from disassembler import disassemble
-                disassemble(cpu.memory, 0)
+                disassemble(cpu.memory, int(addr))
+
+            case ['trace']:
+                # TODO: Trace execution until next input/breakpoint
+                pass
 
             case _:
                 print('unknown debug command')
