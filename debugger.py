@@ -1,5 +1,4 @@
 import ast
-import logging
 from pathlib import Path
 
 from cpu import CPU
@@ -11,6 +10,20 @@ console = Console()
 # TODO:
 # - wrap CPU.execute() to add pre/post hooks and callback conditions
 # - breakpoint on: address, instruction
+
+# command aliases
+ALIASES = {
+    'l':'look',
+    'n':'north',
+    's':'south',
+    'e':'east',
+    'w':'west',
+    'br':'bridge',
+    'dw':'doorway',
+    'dn':'down',
+    'cn':'continue',
+    'pa':'passage',
+}
 
 class Debugger(CPU):
     def debug_cmd(self, cmd):
@@ -108,20 +121,7 @@ class Debugger(CPU):
             self.debug_cmd(cmd[1:])
             return True
 
-        # command aliases
-        aliases = {
-            'l':'look',
-            'n':'north',
-            's':'south',
-            'e':'east',
-            'w':'west',
-            'br':'bridge',
-            'dw':'doorway',
-            'dn':'down',
-            'cn':'continue',
-            'pa':'passage',
-        }
-        if newcmd := aliases.get(cmd):
+        if newcmd := ALIASES.get(cmd):
             print(f'(aliased {cmd} => {newcmd})')
             cmd = newcmd
 
