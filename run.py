@@ -3,17 +3,6 @@ import string
 
 from debugger import Debugger
 
-import logging
-from rich.logging import RichHandler
-
-FORMAT = "%(message)s"
-logging.basicConfig(
-    level="NOTSET", format=FORMAT, datefmt="[%X]", handlers=[RichHandler()]
-)
-
-log = logging.getLogger("rich")
-
-
 def dump_text_section():
     vm = Debugger.from_snapshot_file('snapshots/start')
 

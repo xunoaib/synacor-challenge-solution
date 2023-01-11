@@ -1,4 +1,5 @@
 import ast
+import copy
 
 from utils import to_register, isreg, read_instruction, load_bytecode
 
@@ -195,6 +196,7 @@ class CPU:
             'registers': self.registers,
             'pc': self.pc,
             'input_buffer': self.input_buffer,
+            'output_buffer': self.input_buffer,
         }
 
     def clone(self):
@@ -203,15 +205,10 @@ class CPU:
 
     def load_snapshot(self, snapshot: dict):
         for attrib in ['memory', 'stack', 'registers', 'pc', 'input_buffer']:
-            setattr(self, attrib, snapshot[attrib])
+            setattr(self, attrib, copy.deepcopy(snapshot[attrib]))
 
     def __repr__(self):
-        return '\n'.join([
-            f'memory = {self.memory}',
-            f'stack = {self.memory}',
-            f'registers = {self.registers}',
-            f'pc = {self.pc}',
-        ])
+        return f'<{self.__class__.__name__}(pc={self.pc}, loc={self.location})>'
 
     @staticmethod
     def read_snapshot(fname):

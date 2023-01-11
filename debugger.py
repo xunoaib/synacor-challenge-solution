@@ -6,14 +6,7 @@ from cpu import CPU
 import utils
 
 from colorama import Style, Fore
-from rich.console import Console
-console = Console()
 
-# TODO:
-# - wrap CPU.execute() to add pre/post hooks and callback conditions
-# - breakpoint on: address, instruction
-
-# command aliases
 ALIASES = {
     'l':'look',
     'n':'north',
@@ -111,8 +104,8 @@ class Debugger(CPU):
                 case _:
                     print('unknown debug command')
 
-        except Exception:
-            console.print_exception(show_locals=False)
+        except Exception as exc:
+            print(exc)
 
     def input(self):
         cmd = input(Fore.YELLOW + Style.BRIGHT + 'dbg> ' + Style.RESET_ALL)
