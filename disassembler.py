@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-from cpu import CPU, read_instruction, isreg
+from cpu import CPU
+from utils import read_instruction, isreg
 
 def format_instruction(opcode, args):
     # allows multi-character output format
