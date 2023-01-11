@@ -54,6 +54,7 @@ def main():
 
     while True:
         vm.run()
+        print(vm.read(), end='')
         vm.process_input()
 
 

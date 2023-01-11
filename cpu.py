@@ -10,6 +10,7 @@ class CPU:
         self.stack = []
         self.pc = 0  # program counter
         self.input_buffer = []  # keyboard input buffer (stack)
+        self.output_buffer = ''
 
         if fname:
             self.load_program(fname)
@@ -35,6 +36,11 @@ class CPU:
         if cmd is None:
             cmd = input('cpu> ')
         self.input_buffer = list(cmd + '\n')[::-1]
+
+    def read(self):
+        result = self.output_buffer
+        self.output_buffer = ''
+        return result
 
     def run(self):
         while self.step():
@@ -64,7 +70,8 @@ class CPU:
 
             case 'out':
                 a = self.readvalue(a)
-                print(chr(a), end='', flush=True)
+                # print(chr(a), end='', flush=True)
+                self.output_buffer += chr(a)
 
             case 'jmp':
                 nextpc = a
@@ -188,6 +195,10 @@ class CPU:
             'pc': self.pc,
             'input_buffer': self.input_buffer,
         }
+
+    def clone(self):
+        snapshot = self.snapshot()
+        return self.__class__.from_snapshot(snapshot)
 
     def load_snapshot(self, snapshot: dict):
         for attrib in ['memory', 'stack', 'registers', 'pc', 'input_buffer']:
