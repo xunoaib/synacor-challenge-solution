@@ -1,9 +1,11 @@
 import ast
+import readline
 from pathlib import Path
 
 from cpu import CPU
 import utils
 
+from colorama import Style, Fore
 from rich.console import Console
 console = Console()
 
@@ -112,17 +114,19 @@ class Debugger(CPU):
         except Exception:
             console.print_exception(show_locals=False)
 
-    def process_input(self, cmd=None):
-        if cmd is None:
-            cmd = input('dbg> ')
+    def input(self):
+        cmd = input(Fore.YELLOW + Style.BRIGHT + 'dbg> ' + Style.RESET_ALL)
+        self.send(cmd)
 
+    # @override
+    def send(self, cmd):
         # intercept special debug commands
         if cmd.startswith('.'):
             self.debug_cmd(cmd[1:])
             return True
 
         if newcmd := ALIASES.get(cmd):
-            print(f'(aliased {cmd} => {newcmd})')
+            print(f'# aliased {cmd} => {newcmd}')
             cmd = newcmd
 
-        super().process_input(cmd)
+        super().send(cmd)

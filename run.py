@@ -55,7 +55,7 @@ def main():
     while True:
         vm.run()
         print(vm.read(), end='')
-        vm.process_input()
+        vm.input()
 
 
 if __name__ == '__main__':

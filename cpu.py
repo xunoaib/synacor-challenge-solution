@@ -32,10 +32,11 @@ class CPU:
     def location(self, value: int):
         self.memory[2732] = value
 
-    def process_input(self, cmd=None):
-        if cmd is None:
-            cmd = input('cpu> ')
-        self.input_buffer = list(cmd + '\n')[::-1]
+    def input(self):
+        self.send(input('cpu> '))
+
+    def send(self, data):
+        self.input_buffer = list(data + '\n')[::-1]
 
     def read(self):
         result = self.output_buffer
@@ -219,7 +220,7 @@ class CPU:
 
     @classmethod
     def from_snapshot_file(cls, fname):
-        snapshot = CPU.read_snapshot(fname)
+        snapshot = cls.read_snapshot(fname)
         return cls.from_snapshot(snapshot)
 
     @classmethod
