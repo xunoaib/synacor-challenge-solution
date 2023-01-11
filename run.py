@@ -15,7 +15,7 @@ log = logging.getLogger("rich")
 
 
 def dump_text_section():
-    vm = Debugger.from_snapshot('snapshots/start')
+    vm = Debugger.from_snapshot_file('snapshots/start')
 
     s = ''
     for v in vm.memory[6072:]:
@@ -26,7 +26,7 @@ def dump_text_section():
     print(s)
 
 def dump_text_section_addrs():
-    vm = Debugger.from_snapshot('snapshots/start')
+    vm = Debugger.from_snapshot_file('snapshots/start')
 
     addr = 6072
     buffer = ''
@@ -45,7 +45,7 @@ def dump_text_section_addrs():
 
 def main():
     # vm = Debugger('snapshots/coins')
-    vm = Debugger.from_snapshot('snapshots/start')
+    vm = Debugger.from_snapshot_file('snapshots/start')
     # vm.debug_cmd('giveall')
     # vm.debug_cmd('load coins')
 

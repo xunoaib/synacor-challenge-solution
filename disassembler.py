@@ -46,7 +46,7 @@ def disassemble(memory: list[int], addr=0):
 
 def main():
     # vm = CPU('challenge.bin')
-    vm = CPU.from_snapshot('snapshots/start')
+    vm = CPU.from_snapshot_file('snapshots/start')
     disassemble(vm.memory, 0)
 
 if __name__ == '__main__':

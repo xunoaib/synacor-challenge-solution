@@ -207,8 +207,12 @@ class CPU:
             return ast.literal_eval(f.read())
 
     @classmethod
-    def from_snapshot(cls, fname):
-        vm = cls()
+    def from_snapshot_file(cls, fname):
         snapshot = CPU.read_snapshot(fname)
+        return cls.from_snapshot(snapshot)
+
+    @classmethod
+    def from_snapshot(cls, snapshot):
+        vm = cls()
         vm.load_snapshot(snapshot)
         return vm
