@@ -1,118 +1,128 @@
 import ast
+import logging
 from pathlib import Path
-from itertools import zip_longest
+
+from cpu import CPU
+import utils
+
+from rich.console import Console
+console = Console()
 
 # TODO:
 # - wrap CPU.execute() to add pre/post hooks and callback conditions
 # - breakpoint on: address, instruction
 
-class Debugger:
-    def __init__(self, cpu):
-        self.cpu = cpu
+class Debugger(CPU):
+    def debug_cmd(self, cmd):
+        directory = Path('snapshots')
+        try:
+            match cmd.split():
+                case ['dump']:
+                    print(repr(self))
 
-def diff_snapshot(snap1, snap2):
-    diff_result = {}
-    for key in snap1:
-        v1 = snap1[key]
-        v2 = snap2[key]
+                case ['dump', fname]:
+                    if Path(fname).exists():
+                        if input(f'{fname} already exists. Overwrite? [y/N] ') != 'y':
+                            return
+                    with open(fname, 'w') as f:
+                        f.write(repr(self))
+                    print('saved to', fname)
 
-        if v1 == v2:
-            continue
+                case ['save', *fname]:
+                    if not fname:
+                        fname = ['last']
+                    directory.mkdir(exist_ok=True)
+                    fname = directory / fname[0]
+                    with open(fname, 'w') as f:
+                        f.write(str(self.snapshot()))
+                    print('saved snapshot to', fname)
 
-        if isinstance(v1, list):
-            diff_result[key] = [(idx, subv1, subv2) for idx, (subv1, subv2) in
-                                enumerate(zip_longest(v1, v2)) if subv1 != subv2]
-        else:
-            diff_result[key] = (v1, v2)
-    return diff_result
+                case ['load', fname]:
+                    print(f'restoring snapshot "{fname}"')
+                    with open(directory / fname) as f:
+                        snapshot = ast.literal_eval(f.read())
+                    self.load_snapshot(snapshot)
 
-def debug_cmd(cpu, cmd):
-    directory = Path('snapshots')
-    try:
-        match cmd.split():
-            case ['dump']:
-                print(repr(cpu))
+                case ['diff', fname1, *fnames]:
+                    with open(directory / fname1) as f:
+                        snap1 = ast.literal_eval(f.read())
 
-            case ['dump', fname]:
-                if Path(fname).exists():
-                    if input(f'{fname} already exists. Overwrite? [y/N] ') != 'y':
-                        return
-                with open(fname, 'w') as f:
-                    f.write(repr(cpu))
-                print('saved to', fname)
+                    if fnames:
+                        with open(directory / fnames[0]) as f:
+                            snap2 = ast.literal_eval(f.read())
+                    else:
+                        snap2 = self.snapshot()
 
-            # case ['debug', ('on' | 'off') as val]:
-            #     cpu.debug = val == 'on'
-            #     print(f'set debug = {cpu.debug}')
+                    diffs = utils.diff_snapshot(snap1, snap2)
+                    __import__('pprint').pprint(diffs)
 
-            case ['save', *fname]:
-                if not fname:
-                    fname = ['last']
-                directory.mkdir(exist_ok=True)
-                fname = directory / fname[0]
-                with open(fname, 'w') as f:
-                    f.write(str(cpu.snapshot()))
-                print('saved snapshot to', fname)
+                case ['giveall']:
+                    for addr in range(2670, 2734+1, 4):
+                        self.memory[addr] = 0
 
-            case ['load', fname]:
-                print(f'restoring snapshot "{fname}"')
-                with open(directory / fname) as f:
-                    snapshot = ast.literal_eval(f.read())
-                cpu.restore_snapshot(snapshot)
+                # write value to the STACK at address (0 = the bottom)
+                case ['ws', addr, val]:
+                    self.stack[int(addr)] = int(val)
 
-            case ['diff', fname1, *fnames]:
-                with open(directory / fname1) as f:
-                    snap1 = ast.literal_eval(f.read())
+                # write value to MEMORY at address (0 = the bottom)
+                case ['wm', addr, val]:
+                    self.memory[int(addr)] = int(val)
 
-                if fnames:
-                    with open(directory / fnames[0]) as f:
-                        snap2 = ast.literal_eval(f.read())
-                else:
-                    snap2 = cpu.snapshot()
+                # print memory
+                case ['pm', addr, *nbytes]:
+                    addr = int(addr)
+                    nbytes = int(nbytes[0]) if nbytes else 1
+                    print(self.memory[addr:addr+nbytes])
 
-                diffs = diff_snapshot(snap1, snap2)
-                __import__('pprint').pprint(diffs)
+                case ['reg']:
+                    print(self.registers)
 
-            case ['giveall']:
-                for addr in range(2670, 2734+1, 4):
-                    cpu.memory[addr] = 0
+                case ['ps', addr, *nbytes]:
+                    addr = int(addr)
+                    nbytes = int(nbytes[0]) if nbytes else 1
+                    print(self.stack[addr:addr+nbytes])
 
-            # write value to the STACK at address (0 = the bottom)
-            case ['ws', addr, val]:
-                cpu.stack[int(addr)] = int(val)
+                case ['pinv']:
+                    for addr in range(2670, 2734+1, 4):
+                        print(addr, self.memory[addr:addr+4])
 
-            # write value to MEMORY at address (0 = the bottom)
-            case ['wm', addr, val]:
-                cpu.memory[int(addr)] = int(val)
+                case ['loc']:
+                    print(self.location)
 
-            # print memory
-            case ['pm', addr, *nbytes]:
-                addr = int(addr)
-                nbytes = int(nbytes[0]) if nbytes else 1
-                print(cpu.memory[addr:addr+nbytes])
+                case ['dis', addr]:
+                    from disassembler import disassemble
+                    disassemble(self.memory, int(addr))
 
-            case ['reg']:
-                print(cpu.registers)
+                case _:
+                    print('unknown debug command')
 
-            case ['ps', addr, *nbytes]:
-                addr = int(addr)
-                nbytes = int(nbytes[0]) if nbytes else 1
-                print(cpu.stack[addr:addr+nbytes])
+        except Exception:
+            console.print_exception(show_locals=False)
 
-            case ['pinv']:
-                for addr in range(2670, 2734+1, 4):
-                    print(addr, cpu.memory[addr:addr+4])
+    def process_input(self, cmd=None):
+        if cmd is None:
+            cmd = input('dbg> ')
 
-            case ['dis', addr]:
-                from disassembler import disassemble
-                disassemble(cpu.memory, int(addr))
+        # intercept special debug commands
+        if cmd.startswith('.'):
+            self.debug_cmd(cmd[1:])
+            return True
 
-            case ['trace']:
-                # TODO: Trace execution until next input/breakpoint
-                pass
+        # command aliases
+        aliases = {
+            'l':'look',
+            'n':'north',
+            's':'south',
+            'e':'east',
+            'w':'west',
+            'br':'bridge',
+            'dw':'doorway',
+            'dn':'down',
+            'cn':'continue',
+            'pa':'passage',
+        }
+        if newcmd := aliases.get(cmd):
+            print(f'(aliased {cmd} => {newcmd})')
+            cmd = newcmd
 
-            case _:
-                print('unknown debug command')
-
-    except Exception as exc:
-        print(exc)
+        super().process_input(cmd)

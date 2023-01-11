@@ -1,63 +1,18 @@
 import ast
-import re
-import readline
-from dataclasses import dataclass
 
-from debugger import debug_cmd
-
-@dataclass
-class Opcode:
-    name: str
-    id: int
-    nargs: int
-
-    def __len__(self):
-        return 1 + self.nargs
-
-def parse_opcodes():
-    with open('arch-spec') as f:
-        data = f.read()
-
-    opcodes = {}
-    for name, opid, args in re.findall(r'(.*): (\d+)(.*?)\n', data):
-        nargs = len(args.strip().split())
-        opid = int(opid)
-        opcodes[opid] = Opcode(name, opid, nargs)
-    return opcodes
-
-OPCODES = parse_opcodes()
-
-def load_bytecode(fname):
-    with open(fname, 'rb') as f:
-        data = f.read()
-
-    return [
-        int.from_bytes(data[i:i+2], 'little')
-        for i in range(0, len(data), 2)
-    ]
-
-def isreg(arg):
-    return arg >= 32768
-
-def to_register(arg):
-    if isreg(arg):
-        return arg - 32768
-    return arg
-
-def read_instruction(memory, addr):
-    opid = memory[addr]
-    opcode = OPCODES[opid]
-    args = tuple(memory[addr+1:addr+1+opcode.nargs])
-    return opcode, args
+from utils import to_register, isreg, read_instruction, load_bytecode
 
 
 class CPU:
-    def __init__(self):
+    def __init__(self, fname=None):
         self.memory = []
         self.registers = [0] * 8
         self.stack = []
         self.pc = 0  # program counter
-        self.input_buffer = []  # keyboard input
+        self.input_buffer = []  # keyboard input buffer (stack)
+
+        if fname:
+            self.load_program(fname)
 
     def load_program(self, fname):
         self.memory = load_bytecode(fname)
@@ -68,12 +23,28 @@ class CPU:
             return self.registers[arg - 32768]
         return arg
 
+    @property
+    def location(self):
+        return self.memory[2732]
+
+    @location.setter
+    def location(self, value: int):
+        self.memory[2732] = value
+
+    def process_input(self, cmd=None):
+        if cmd is None:
+            cmd = input('cpu> ')
+        self.input_buffer = list(cmd + '\n')[::-1]
+
     def run(self):
         while self.step():
             pass
 
+    def get_next_instruction(self):
+        return read_instruction(self.memory, self.pc)
+
     def step(self):
-        opcode, args = read_instruction(self.memory, self.pc)
+        opcode, args = self.get_next_instruction()
         return self.execute(opcode, args)
 
     def execute(self, opcode, args):
@@ -195,33 +166,11 @@ class CPU:
             # encountered; this means that you can safely read whole lines from the
             # keyboard and trust that they will be fully read
             case 'in':
-                a = to_register(a)
+                # pause program when input buffer is empty
                 if not self.input_buffer:
-                    cmd = input('> ')
+                    return False
 
-                    # intercept special debug commands
-                    if cmd.startswith('.'):
-                        debug_cmd(self, cmd[1:])
-                        return True
-
-                    # command aliases
-                    aliases = {
-                        'l':'look',
-                        'n':'north',
-                        's':'south',
-                        'e':'east',
-                        'w':'west',
-                        'br':'bridge',
-                        'dw':'doorway',
-                        'dn':'down',
-                        'cn':'continue',
-                        'pa':'passage',
-                    }
-                    if newcmd := aliases.get(cmd):
-                        print(f'(aliased {cmd} => {newcmd})')
-                        cmd = newcmd
-
-                    self.input_buffer = list(cmd + '\n')[::-1]
+                a = to_register(a)
                 self.registers[a] = ord(self.input_buffer.pop())
 
             case _:
@@ -240,7 +189,7 @@ class CPU:
             'input_buffer': self.input_buffer,
         }
 
-    def restore_snapshot(self, snapshot: dict):
+    def load_snapshot(self, snapshot: dict):
         for attrib in ['memory', 'stack', 'registers', 'pc', 'input_buffer']:
             setattr(self, attrib, snapshot[attrib])
 
@@ -256,3 +205,10 @@ class CPU:
     def read_snapshot(fname):
         with open(fname) as f:
             return ast.literal_eval(f.read())
+
+    @classmethod
+    def from_snapshot(cls, fname):
+        vm = cls()
+        snapshot = CPU.read_snapshot(fname)
+        vm.load_snapshot(snapshot)
+        return vm
