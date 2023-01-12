@@ -107,9 +107,17 @@ class Debugger(CPU):
         except Exception as exc:
             print(exc)
 
+    # @override
     def input(self):
         cmd = input(Fore.YELLOW + Style.BRIGHT + 'dbg> ' + Style.RESET_ALL)
         self.send(cmd)
+
+    def sendcopy(self, cmd):
+        '''Sends a command to a copy of the current VM and returns the new VM'''
+
+        vm = self.clone()
+        vm.send(cmd)
+        return vm
 
     # @override
     def send(self, cmd):

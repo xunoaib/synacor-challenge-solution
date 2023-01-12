@@ -7,14 +7,12 @@ def next_states(vm: Debugger):
     exits = get_exits(vm)
     vms = []
     for direction in exits:
-        n = vm.clone()
-        n.send(direction)
+        n = vm.sendcopy(direction)
         vms.append((direction, n))
     return vms
 
 def get_exits(vm: Debugger):
-    vm = vm.clone()
-    vm.send('look')
+    vm = vm.sendcopy('look')
     data = vm.read()
     if exitsstr := re.search(r'\nThere (is|are) (\d+) exits?:\n(.*)\nWhat do you do?', data, re.DOTALL):
         return re.findall(r'- (.*?)\n', exitsstr.group(3))

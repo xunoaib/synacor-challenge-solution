@@ -1,14 +1,24 @@
 #!/usr/bin/env python3
-from z3 import Solver, Int, sat, Or
-from itertools import combinations, permutations
+from z3 import Solver, Int, Or
+from itertools import combinations, permutations, pairwise
 
-def solve_perm():
+from debugger import Debugger
+import utils
+
+COIN_NAMES = {
+    2: 'red coin',
+    3: 'corroded coin',
+    5: 'shiny coin',
+    7: 'concave coin',
+    9: 'blue coin',
+}
+
+def solve_coin_order():
     for a,b,c,d,e in permutations([2,3,5,7,9]):
         if a + b * c**2 + d**3 - e == 399:
-            print([a,b,c,d,e])
-            return
+            return [a,b,c,d,e]
 
-def solve_z3():
+def solve_coin_order_z3():
     a,b,c,d,e = vals = [Int(chr(ord('a') + i)) for i in range(5)]
 
     s = Solver()
@@ -22,19 +32,24 @@ def solve_z3():
         conds = [v == n for n in nums]
         s.add(Or(conds))
 
-    while s.check() == sat:
-        m = s.model()
-        ans = [m[v] for v in vals]
-        print(ans)
+    m = s.model()
+    return [m[v] for v in vals]
 
-        block = []
-        for var in m:
-            block.append(var() != m[var])
-        s.add(Or(block))
 
 def main():
-    solve_perm()
-    # solve_z3()
+    coins = solve_coin_order()
+    print('coin order:', coins)
+    print()
+
+    vm = Debugger.from_snapshot_file('snapshots/coins.blank')
+    vm.debug_cmd('giveall')
+    vms = [vm]
+
+    for coin in coins:
+        vms.append(vms[-1].sendcopy('use ' + COIN_NAMES[coin]))
+        print(vms[-1].read().strip())
+        diff = utils.diff_vms(*vms[-2:])
+        __import__('pprint').pprint(diff)
 
 if __name__ == '__main__':
     try:

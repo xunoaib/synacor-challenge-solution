@@ -61,3 +61,6 @@ def diff_snapshot(snap1, snap2):
         else:
             diff_result[key] = (v1, v2)
     return diff_result
+
+def diff_vms(v1, v2):
+    return diff_snapshot(v1.snapshot(), v2.snapshot())
