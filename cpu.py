@@ -10,8 +10,8 @@ class CPU:
         self.registers = [0] * 8
         self.stack = []
         self.pc = 0  # program counter
-        self.input_buffer = []  # keyboard input buffer (stack)
         self.output_buffer = ''
+        self.input_buffer = []  # keyboard input buffer
 
         if fname:
             self.load_program(fname)
@@ -37,7 +37,8 @@ class CPU:
         self.send(input('cpu> '))
 
     def send(self, data):
-        self.input_buffer = list(data + '\n')[::-1]
+        self.input_buffer = list(data + '\n')
+        self.run()
 
     def read(self):
         result = self.output_buffer
@@ -180,7 +181,7 @@ class CPU:
                     return False
 
                 a = to_register(a)
-                self.registers[a] = ord(self.input_buffer.pop())
+                self.registers[a] = ord(self.input_buffer.pop(0))
 
             case _:
                 print('unimplemented:', opcode, args)
