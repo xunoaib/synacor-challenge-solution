@@ -35,6 +35,9 @@ class Debugger(CPU):
                         f.write(repr(self))
                     print('saved to', fname)
 
+                case ['pc']:
+                    print('pc =', self.pc)
+
                 case ['save', *fname]:
                     if not fname:
                         fname = ['last']
@@ -53,16 +56,13 @@ class Debugger(CPU):
                     print('restored snapshot from ', fname)
 
                 case ['diff', fname1, *fnames]:
-                    with open(directory / fname1) as f:
-                        snap1 = ast.literal_eval(f.read())
-
+                    directory = Path('snapshots')
+                    vm1 = self.from_snapshot_file(directory / fname1)
                     if fnames:
-                        with open(directory / fnames[0]) as f:
-                            snap2 = ast.literal_eval(f.read())
+                        vm2 = self.from_snapshot_file(directory / fnames[0])
                     else:
-                        snap2 = self.snapshot()
-
-                    diffs = utils.diff_snapshot(snap1, snap2)
+                        vm2 = self
+                    diffs = utils.diff_vms(vm1, vm2)
                     __import__('pprint').pprint(diffs)
 
                 case ['giveall']:
