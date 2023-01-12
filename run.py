@@ -33,19 +33,12 @@ def dump_text_section_addrs():
         addr += 1
 
 def main():
-    # vm = Debugger('snapshots/coins')
+    # vm = Debugger('challenge.bin')
     vm = Debugger.from_snapshot_file('snapshots/start')
     # vm.debug_cmd('giveall')
     # vm.debug_cmd('load coins')
 
-    # vm.run()
-    # vm.process_input('look')
-
-    while True:
-        vm.run()
-        print(vm.read(), end='')
-        vm.input()
-
+    vm.interactive()
 
 if __name__ == '__main__':
     try:

@@ -40,6 +40,15 @@ class CPU:
         self.input_buffer = list(data + '\n')
         self.run()
 
+    def interactive(self):
+        try:
+            while True:
+                self.run()
+                print(self.read(), end='')
+                self.input()
+        except EOFError:
+            pass
+
     def read(self):
         '''Read and remove all data from the output buffer'''
 
