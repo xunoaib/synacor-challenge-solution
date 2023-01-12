@@ -22,7 +22,6 @@ ALIASES = {
 
 class Debugger(CPU):
     def debug_cmd(self, cmd):
-        directory = Path('snapshots')
         try:
             match cmd.split():
                 case ['dump']:
@@ -39,6 +38,7 @@ class Debugger(CPU):
                 case ['save', *fname]:
                     if not fname:
                         fname = ['last']
+                    directory = Path('snapshots')
                     directory.mkdir(exist_ok=True)
                     fname = directory / fname[0]
                     with open(fname, 'w') as f:
@@ -46,10 +46,11 @@ class Debugger(CPU):
                     print('saved snapshot to', fname)
 
                 case ['load', fname]:
-                    print(f'restoring snapshot "{fname}"')
-                    with open(directory / fname) as f:
+                    fname = Path('snapshots') / fname
+                    with open(fname) as f:
                         snapshot = ast.literal_eval(f.read())
                     self.load_snapshot(snapshot)
+                    print('restored snapshot from ', fname)
 
                 case ['diff', fname1, *fnames]:
                     with open(directory / fname1) as f:
@@ -97,9 +98,35 @@ class Debugger(CPU):
                 case ['loc']:
                     print(self.location)
 
+                case ['loc', newloc]:
+                    print('changing location to:', newloc)
+                    self.location = int(newloc)
+
                 case ['dis', addr]:
                     from disassembler import disassemble
                     disassemble(self.memory, int(addr))
+
+                case ['solve', 'coins']:
+                    coins = [
+                        'blue coin',
+                        'red coin',
+                        'shiny coin',
+                        'concave coin',
+                        'corroded coin'
+                    ]
+                    for coin in coins:
+                        self.send('use ' + coin)
+                    self.run()
+
+                case ['macro', fname]:
+                    fname = Path('macros') / fname
+                    print('running macros from:', fname)
+                    with open(fname) as f:
+                        commands = f.read().strip().splitlines()
+
+                    for cmd in commands:
+                        print(f'>>> sending "{cmd}"')
+                        self.send(cmd)
 
                 case _:
                     print('unknown debug command')
@@ -121,6 +148,11 @@ class Debugger(CPU):
 
     # @override
     def send(self, cmd):
+        if ';' in cmd:
+            for subcmd in cmd.split(';'):
+                self.send(subcmd.strip())
+            return
+
         # intercept special debug commands
         if cmd.startswith('.'):
             self.debug_cmd(cmd[1:])
