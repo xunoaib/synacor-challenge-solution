@@ -10,8 +10,8 @@ class CPU:
         self.registers = [0] * 8
         self.stack = []
         self.pc = 0  # program counter
-        self.output_buffer = ''
         self.input_buffer = []  # keyboard input buffer
+        self.output_buffer = ''
 
         if fname:
             self.load_program(fname)
@@ -41,11 +41,15 @@ class CPU:
         self.run()
 
     def read(self):
+        '''Read and remove all data from the output buffer'''
+
         result = self.output_buffer
         self.output_buffer = ''
         return result
 
     def run(self):
+        '''Run until halted or more keyboard input is needed'''
+
         while self.step():
             pass
 
@@ -197,7 +201,7 @@ class CPU:
             'registers': self.registers,
             'pc': self.pc,
             'input_buffer': self.input_buffer,
-            'output_buffer': self.input_buffer,
+            'output_buffer': self.output_buffer,
         }
 
     def clone(self):
@@ -205,7 +209,7 @@ class CPU:
         return self.__class__.from_snapshot(snapshot)
 
     def load_snapshot(self, snapshot: dict):
-        for attrib in ['memory', 'stack', 'registers', 'pc', 'input_buffer']:
+        for attrib in ['memory', 'stack', 'registers', 'pc', 'input_buffer', 'output_buffer']:
             setattr(self, attrib, copy.deepcopy(snapshot[attrib]))
 
     def __repr__(self):
