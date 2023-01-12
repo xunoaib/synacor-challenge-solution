@@ -1,21 +1,21 @@
 #!/usr/bin/env python3
 import string
 
-from debugger import Debugger
+from enhancedcpu import EnhancedCPU
 
 def dump_text_section():
-    vm = Debugger.from_snapshot_file('snapshots/start')
+    vm = EnhancedCPU.from_snapshot_file('snapshots/start')
 
     s = ''
     for v in vm.memory[6072:]:
         ch = chr(v)
         if ch not in string.printable:
-            ch = '\n'
+            ch = '\n\n'
         s += ch
     print(s)
 
 def dump_text_section_addrs():
-    vm = Debugger.from_snapshot_file('snapshots/start')
+    vm = EnhancedCPU.from_snapshot_file('snapshots/start')
 
     addr = 6072
     buffer = ''
@@ -33,8 +33,8 @@ def dump_text_section_addrs():
         addr += 1
 
 def main():
-    # vm = Debugger('challenge.bin')
-    vm = Debugger.from_snapshot_file('snapshots/start')
+    # vm = enhancedcpu('challenge.bin')
+    vm = EnhancedCPU.from_snapshot_file('snapshots/start')
     # vm.debug_cmd('giveall')
     # vm.debug_cmd('load coins')
 
@@ -43,5 +43,6 @@ def main():
 if __name__ == '__main__':
     try:
         main()
+        # dump_text_section()
     except (KeyboardInterrupt, EOFError):
         pass

@@ -2,7 +2,7 @@
 from z3 import Solver, Int, Or
 from itertools import combinations, permutations, pairwise
 
-from debugger import Debugger
+from enhancedcpu import EnhancedCPU
 import utils
 
 COIN_NAMES = {
@@ -41,7 +41,7 @@ def main():
     print('coin order:', coins)
     print()
 
-    vm = Debugger.from_snapshot_file('snapshots/coins.blank')
+    vm = EnhancedCPU.from_snapshot_file('snapshots/coins.blank')
     vm.debug_cmd('giveall')
     vms = [vm]
 

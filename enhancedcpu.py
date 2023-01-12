@@ -20,7 +20,7 @@ ALIASES = {
     'pa':'passage',
 }
 
-class Debugger(CPU):
+class EnhancedCPU(CPU):
     def debug_cmd(self, cmd):
         try:
             match cmd.split():

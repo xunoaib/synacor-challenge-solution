@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 import re
 
-from debugger import Debugger
+from enhancedcpu import EnhancedCPU
 
-def next_states(vm: Debugger):
+def next_states(vm: EnhancedCPU):
     exits = get_exits(vm)
     vms = []
     for direction in exits:
@@ -11,7 +11,7 @@ def next_states(vm: Debugger):
         vms.append((direction, n))
     return vms
 
-def get_exits(vm: Debugger):
+def get_exits(vm: EnhancedCPU):
     vm = vm.sendcopy('look')
     data = vm.read()
     if exitsstr := re.search(r'\nThere (is|are) (\d+) exits?:\n(.*)\nWhat do you do?', data, re.DOTALL):
@@ -19,7 +19,7 @@ def get_exits(vm: Debugger):
     return []
 
 def main():
-    vm = Debugger.from_snapshot_file('snapshots/ladder')
+    vm = EnhancedCPU.from_snapshot_file('snapshots/ladder')
     vm.debug_cmd('giveall')
     vm.send('look')
 
