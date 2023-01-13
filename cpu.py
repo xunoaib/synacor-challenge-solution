@@ -25,6 +25,9 @@ class CPU:
             return self.registers[arg - 32768]
         return arg
 
+    def set_register(self, regidx, val):
+        self.registers[regidx] = val
+
     @property
     def location(self):
         return self.memory[2732]
@@ -105,19 +108,19 @@ class CPU:
             case 'set':
                 a = to_register(a)
                 b = self.readvalue(b)
-                self.registers[a] = b
+                self.set_register(a, b)
 
             case 'add':
                 a = to_register(a)
                 b = self.readvalue(b)
                 c = self.readvalue(c)
-                self.registers[a] = (b + c) % 32768
+                self.set_register(a, (b + c) % 32768)
 
             case 'eq':
                 a = to_register(a)
                 b = self.readvalue(b)
                 c = self.readvalue(c)
-                self.registers[a] = int(b == c)
+                self.set_register(a, int(b == c))
 
             case 'push':
                 a = self.readvalue(a)
@@ -125,30 +128,30 @@ class CPU:
 
             case 'pop':
                 a = to_register(a)
-                self.registers[a] = self.stack.pop()
+                self.set_register(a, self.stack.pop())
 
             case 'gt':
                 a = to_register(a)
                 b = self.readvalue(b)
                 c = self.readvalue(c)
-                self.registers[a] = int(b > c)
+                self.set_register(a, int(b > c))
 
             case 'and':
                 a = to_register(a)
                 b = self.readvalue(b)
                 c = self.readvalue(c)
-                self.registers[a] = int(b & c)
+                self.set_register(a, int(b & c))
 
             case 'or':
                 a = to_register(a)
                 b = self.readvalue(b)
                 c = self.readvalue(c)
-                self.registers[a] = int(b | c)
+                self.set_register(a, int(b | c))
 
             case 'not':
                 a = to_register(a)
                 b = self.readvalue(b)
-                self.registers[a] = ~b & (2**15-1)
+                self.set_register(a, ~b & (2**15-1))
 
             case 'call':
                 self.stack.append(nextpc)
@@ -158,19 +161,19 @@ class CPU:
                 a = to_register(a)
                 b = self.readvalue(b)
                 c = self.readvalue(c)
-                self.registers[a] = (b * c) % 32768
+                self.set_register(a, (b * c) % 32768)
 
             case 'mod':
                 a = to_register(a)
                 b = self.readvalue(b)
                 c = self.readvalue(c)
-                self.registers[a] = (b % c)
+                self.set_register(a, (b % c))
 
             # read memory at address <b> and write it to <a>
             case 'rmem':
                 a = to_register(a)
                 b = self.readvalue(b)
-                self.registers[a] = self.memory[b]
+                self.set_register(a, self.memory[b])
 
             # write the value from <b> into memory at address <a>
             case 'wmem':
@@ -194,7 +197,7 @@ class CPU:
                     return False
 
                 a = to_register(a)
-                self.registers[a] = ord(self.input_buffer.pop(0))
+                self.set_register(a, ord(self.input_buffer.pop(0)))
 
             case _:
                 print('unimplemented:', opcode, args)
