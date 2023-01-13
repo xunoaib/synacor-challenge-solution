@@ -50,6 +50,7 @@ def main():
         print(vms[-1].read().strip())
         diff = utils.diff_vms(*vms[-2:])
         __import__('pprint').pprint(diff)
+        # utils.rprint_diff(dfif)
 
 if __name__ == '__main__':
     try:

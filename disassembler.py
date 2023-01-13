@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+import string
 from cpu import CPU
 from utils import read_instruction, isreg
 
@@ -41,7 +42,12 @@ def disassemble(memory: list[int], addr=0):
             addr += len(opcode)
 
         except KeyError:
-            print(addr, 'err [%s]' % memory[addr])
+            val = memory[addr]
+            if val < 256 and chr(val) in string.printable:
+                val = repr(chr(val)) + f' [{val}]'
+            else:
+                val = f'[{val}]'
+            print(addr, 'err %s' % val)
             addr += 1
 
 def main():
