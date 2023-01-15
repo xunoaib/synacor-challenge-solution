@@ -18,8 +18,8 @@ def format_instruction(opcode, args):
 
     return opcode.name + ' ' + argregs
 
-def disassemble(memory: list[int], addr=0):
-    while addr < len(memory):
+def disassemble(memory: list[int], addr=0, lines=15):
+    while addr < len(memory) and lines > 0:
         try:
             opcode, args = read_instruction(memory, addr)
             curaddr = addr
@@ -40,6 +40,7 @@ def disassemble(memory: list[int], addr=0):
 
             print(curaddr, format_instruction(opcode, args))
             addr += len(opcode)
+            lines -= 1
 
         except KeyError:
             val = memory[addr]
