@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 import re
+from colorama import Style, Fore
 
 from enhancedcpu import EnhancedCPU
 
@@ -19,9 +20,12 @@ def get_exits(vm: EnhancedCPU):
     return []
 
 def main():
-    vm = EnhancedCPU.from_snapshot_file('snapshots/ladder')
-    vm.debug_cmd('giveall')
-    vm.send('look')
+    # vm = EnhancedCPU('challenge.bin')
+    vm = EnhancedCPU.from_snapshot_file('snapshots/start')
+    vm.run()
+    # vm = EnhancedCPU.from_snapshot_file('snapshots/ladder')
+    # vm.debug_cmd('giveall')
+    # vm.send('look')
 
     visited = {vm.location: vm}
     q = [(vm, tuple())]
@@ -29,14 +33,14 @@ def main():
     while q:
         current, moves = q.pop(0)
         print()
-        print(current, moves)
+        print(Fore.GREEN, current, moves, Style.RESET_ALL)
         print()
         print(current.read().strip())
 
         states = next_states(current)
         for next_move, neighbor in states:
-            if next_move == 'ladder':
-                continue  # avoid leaving the maze
+            # if next_move == 'ladder':
+            #     continue  # avoid leaving the maze
             if neighbor.location not in visited:
                 visited[neighbor.location] = neighbor
                 q.append((neighbor, moves + (next_move,)))

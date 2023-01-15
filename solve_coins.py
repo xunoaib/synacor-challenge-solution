@@ -13,8 +13,10 @@ COIN_NAMES = {
     9: 'blue coin',
 }
 
+COIN_VALS = [2, 3, 5, 7, 9]
+
 def solve_coin_order():
-    for a,b,c,d,e in permutations([2,3,5,7,9]):
+    for a,b,c,d,e in permutations(COIN_VALS):
         if a + b * c**2 + d**3 - e == 399:
             return [a,b,c,d,e]
 
@@ -28,9 +30,7 @@ def solve_coin_order_z3():
         s.add(x != y)
 
     for v in vals:
-        nums = [2, 3, 5, 7, 9]
-        conds = [v == n for n in nums]
-        s.add(Or(conds))
+        s.add(Or([v == n for n in COIN_VALS]))
 
     m = s.model()
     return [m[v] for v in vals]
@@ -38,19 +38,10 @@ def solve_coin_order_z3():
 
 def main():
     coins = solve_coin_order()
-    print('coin order:', coins)
-    print()
-
-    vm = EnhancedCPU.from_snapshot_file('snapshots/coins.blank')
-    vm.debug_cmd('giveall')
-    vms = [vm]
+    print('coin order:', coins, '\n')
 
     for coin in coins:
-        vms.append(vms[-1].sendcopy('use ' + COIN_NAMES[coin]))
-        print(vms[-1].read().strip())
-        diff = utils.diff_vms(*vms[-2:])
-        __import__('pprint').pprint(diff)
-        # utils.rprint_diff(dfif)
+        print('use', COIN_NAMES[coin])
 
 if __name__ == '__main__':
     try:

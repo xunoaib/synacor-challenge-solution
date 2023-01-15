@@ -77,6 +77,10 @@ class EnhancedCPU(CPU):
                 case ['wm', addr, val]:
                     self.memory[int(addr)] = int(val)
 
+                # write value to register
+                case ['wr', addr, val]:
+                    self.registers[int(addr)] = int(val)
+
                 # print memory
                 case ['pm', addr, *nbytes]:
                     addr = int(addr)
@@ -102,9 +106,17 @@ class EnhancedCPU(CPU):
                     print('changing location to:', newloc)
                     self.location = int(newloc)
 
-                case ['dis', addr]:
+                case ['dis']:
                     from disassembler import disassemble
-                    disassemble(self.memory, int(addr))
+                    disassemble(self.memory, self.pc, 15)
+
+                case ['dis', lines]:
+                    from disassembler import disassemble
+                    disassemble(self.memory, self.pc, int(lines))
+
+                case ['dis', lines, addr]:
+                    from disassembler import disassemble
+                    disassemble(self.memory, int(addr), int(lines))
 
                 case ['solve', 'coins']:
                     coins = [
@@ -149,6 +161,7 @@ class EnhancedCPU(CPU):
     # @override
     def send(self, cmd):
         if ';' in cmd:
+            # prevent these from interfering with breakpoints?
             for subcmd in cmd.split(';'):
                 self.send(subcmd.strip())
             return

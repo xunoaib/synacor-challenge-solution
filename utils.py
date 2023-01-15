@@ -13,6 +13,7 @@ class Opcode:
 
     def __len__(self):
         return 1 + self.nargs
+
 def load_bytecode(fname):
     with open(fname, 'rb') as f:
         data = f.read()
