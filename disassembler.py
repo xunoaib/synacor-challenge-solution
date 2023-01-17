@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 import string
-from cpu import CPU
 from utils import read_instruction, isreg
 
-def format_instruction(opcode, args):
+def format_instruction_plain(opcode, args):
     # allows multi-character output format
     if opcode.name == 'out' and isinstance(args[0], str):
         return opcode.name + ' ' + repr(args[0])
@@ -17,6 +16,44 @@ def format_instruction(opcode, args):
         argregs = ' '.join(map(str, argregs))
 
     return opcode.name + ' ' + argregs
+
+
+def format_instruction_sensible(opcode, args):
+    # allows multi-character output format
+    if opcode.name == 'out' and isinstance(args[0], str):
+        return opcode.name + ' ' + repr(args[0])
+
+    argregs = [f'r{v-32768}' if v >= 32768 else v for v in args]
+    if opcode.name == 'out' and isinstance(argregs[0], int):
+        argregs = repr(chr(args[0]))
+    elif not args:
+        argregs = ''
+    else:
+        argregs = list(map(str, argregs))
+        mathsyms = {'and':'&', 'or':'|', 'mult':'*', 'mod':'%', 'add':'+'}
+        match opcode.name:
+            case 'and' | 'or' | 'mult' | 'mod' | 'add':
+                return '{0} = {1} {3} {2}'.format(*argregs, mathsyms[opcode.name])
+            case 'set':
+                return '{} = {}'.format(*argregs)
+            case 'not':
+                return '{} = ~{}'.format(*argregs)
+            case 'gt':
+                return '{} = {} > {}'.format(*argregs)
+            case 'jt':
+                return 'jmp {} if {} > 0'.format(*argregs[::-1])
+            case 'jf':
+                return 'jmp {} if {} = 0'.format(*argregs[::-1])
+            case 'eq':
+                return '{} = ({} == {})'.format(*argregs)
+            case 'rmem':
+                return '{} = mem[{}]'.format(*argregs)
+            case 'wmem':
+                return 'mem[{}] = {}'.format(*argregs)
+        argregs = ' '.join(map(str, argregs))
+    return opcode.name + ' ' + argregs
+
+format_instruction = format_instruction_sensible
 
 def disassemble(memory: list[int], addr=0, lines=15):
     while addr < len(memory) and lines > 0:
@@ -38,7 +75,7 @@ def disassemble(memory: list[int], addr=0, lines=15):
                     next_addr += len(opcode)
                 args = (outstring,)
 
-            print(curaddr, format_instruction(opcode, args))
+            print(curaddr, '', format_instruction(opcode, args))
             addr += len(opcode)
             lines -= 1
 
@@ -48,13 +85,14 @@ def disassemble(memory: list[int], addr=0, lines=15):
                 val = repr(chr(val)) + f' [{val}]'
             else:
                 val = f'[{val}]'
-            print(addr, 'err %s' % val)
+            print(addr, ' err %s' % val)
             addr += 1
 
 def main():
+    from cpu import CPU
     # vm = CPU('challenge.bin')
     vm = CPU.from_snapshot_file('snapshots/start')
-    disassemble(vm.memory, 0)
+    disassemble(vm.memory, 0, 10000000)
 
 if __name__ == '__main__':
     try:
