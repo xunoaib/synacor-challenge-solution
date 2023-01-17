@@ -89,7 +89,6 @@ class CPU:
 
             case 'out':
                 a = self.readvalue(a)
-                # print(chr(a), end='', flush=True)
                 self.output_buffer += chr(a)
 
             case 'jmp':

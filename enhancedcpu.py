@@ -4,6 +4,7 @@ from pathlib import Path
 
 from cpu import CPU
 import utils
+from disassembler import format_instruction
 
 from colorama import Style, Fore
 
@@ -140,6 +141,9 @@ class EnhancedCPU(CPU):
                         print(f'>>> sending "{cmd}"')
                         self.send(cmd)
 
+                case ['quit' | 'q']:
+                    exit()
+
                 case _:
                     print('unknown debug command')
 
@@ -176,3 +180,10 @@ class EnhancedCPU(CPU):
             cmd = newcmd
 
         super().send(cmd)
+
+    # @override
+    def step(self):
+        opcode, args = self.get_next_instruction()
+        print(self.pc, format_instruction(opcode, args))
+        # return self.execute(opcode, args)
+        return super().step()
