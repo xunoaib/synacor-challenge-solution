@@ -1,5 +1,6 @@
 import ast
 import readline
+import sys
 from pathlib import Path
 from functools import cache
 
@@ -28,6 +29,11 @@ class EnhancedCPU(CPU):
         super().__init__(*args, **kwargs)
         self.call_cache = {}
         self.call_stack = []
+
+        # list of condition funcs and corresponding pre/post hooks to call
+        self.hooks = [
+            (call_condition, call_pre_hook, call_post_hook)
+        ]
 
     def debug_cmd(self, cmd):
         try:
@@ -157,6 +163,7 @@ class EnhancedCPU(CPU):
         except Exception as exc:
             print(exc)
 
+
     # @override
     def input(self):
         cmd = input(Fore.YELLOW + Style.BRIGHT + 'dbg> ' + Style.RESET_ALL)
@@ -190,8 +197,13 @@ class EnhancedCPU(CPU):
 
     # @override
     def execute(self, opcode, args):
-        # print(opcode, args)
-        print(self.pc, format_instruction(opcode,args))
+        # print(self.pc, format_instruction(opcode,args))
+
+        # run pre-hooks
+        for cond_func, pre_hook, post_hook in self.hooks:
+            if cond_func(self):
+                pre_hook(self)
+
         if opcode.name == 'call':
             if args[0] == 6027:
                 # check for cached result
@@ -240,3 +252,18 @@ def gen_ret_hook(rv_in):
         return rv_out
 
     return write_cache
+
+
+def call_condition(cpu: EnhancedCPU):
+    '''Returns true if the current instruction is a call'''
+
+    opcode, _ = cpu.get_next_instruction()
+    return opcode.name == 'call'
+
+def call_pre_hook(cpu):
+    # simply print registers
+    inst = format_instruction(*cpu.get_next_instruction())
+    print(inst, cpu.registers, file=sys.stderr)
+
+def call_post_hook(cpu):
+    ...
