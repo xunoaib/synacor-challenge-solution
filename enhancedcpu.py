@@ -1,6 +1,7 @@
 import ast
 import readline
 from pathlib import Path
+from functools import cache
 
 from cpu import CPU
 import utils
@@ -22,6 +23,12 @@ ALIASES = {
 }
 
 class EnhancedCPU(CPU):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.call_cache = {}
+        self.call_stack = []
+
     def debug_cmd(self, cmd):
         try:
             match cmd.split():
@@ -182,8 +189,54 @@ class EnhancedCPU(CPU):
         super().send(cmd)
 
     # @override
-    def step(self):
-        opcode, args = self.get_next_instruction()
-        print(self.pc, format_instruction(opcode, args))
-        # return self.execute(opcode, args)
-        return super().step()
+    def execute(self, opcode, args):
+        # print(opcode, args)
+        print(self.pc, format_instruction(opcode,args))
+        if opcode.name == 'call':
+            if args[0] == 6027:
+                # check for cached result
+                rv_in = (self.r0, self.r1, self.r7)
+
+                # if found, restore pre-calculated registers and advance pc
+                if rv_out := self.call_cache.get(rv_in):
+                    # print('cache hit:', rv_in, rv_out)
+                    for ridx, regval in enumerate(rv_out):
+                        self.registers[ridx] = regval
+
+                    # we're skipping the call, so no need to update the call stack
+                    self.pc += len(opcode)
+                    return True
+
+                # if not found, schedule a new hook to record registers on ret
+                else:
+                    # print('cache miss:', rv_in)
+                    ret_hook = gen_ret_hook(rv_in)
+                    self.call_stack.append(ret_hook)
+
+            # add noop hook for all other calls
+            else:
+                self.call_stack.append(None)
+
+        # when a call returns, run the correspondng ret hook to cache the return values (if needed)
+        elif opcode.name == 'ret':
+            if not self.call_stack:
+                # print('ret call stack empty')
+                pass
+            elif ret_hook := self.call_stack.pop():
+                rv_out = ret_hook(self)
+                # print('ret hook:', rv_out)
+
+        return super().execute(opcode, args)
+
+def gen_ret_hook(rv_in):
+    '''
+    Returns a function that caches the current register values for a given input.
+    Maps rv_in to 'rv_out' whose values are auto retrieved from the cpu.
+    '''
+
+    def write_cache(cpu):
+        rv_out = (cpu.r0, cpu.r1, cpu.r7)
+        cpu.call_cache[rv_in] = rv_out
+        return rv_out
+
+    return write_cache

@@ -90,8 +90,9 @@ def disassemble(memory: list[int], addr=0, lines=15):
 
 def main():
     from cpu import CPU
-    # vm = CPU('challenge.bin')
-    vm = CPU.from_snapshot_file('snapshots/start')
+    vm = CPU('challenge.bin')
+    # vm = CPU.from_snapshot_file('snapshots/start')
+    # vm = CPU('call_6027.bin')
     disassemble(vm.memory, 0, 10000000)
 
 if __name__ == '__main__':
