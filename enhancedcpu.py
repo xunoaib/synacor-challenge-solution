@@ -1,13 +1,10 @@
 import ast
 import re
 import readline
-import sys
 from pathlib import Path
-from functools import cache
 
 from cpu import CPU
 import utils
-from disassembler import format_instruction
 
 from colorama import Style, Fore
 
@@ -25,16 +22,6 @@ ALIASES = {
 }
 
 class EnhancedCPU(CPU):
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.call_cache = {}
-        self.call_stack = []
-
-        # list of condition funcs and corresponding pre/post hooks to call
-        self.hooks = [
-            (call_condition, call_pre_hook, call_post_hook)
-        ]
 
     def debug_cmd(self, cmd):
         try:
@@ -166,7 +153,6 @@ class EnhancedCPU(CPU):
             print(exc)
 
     # @override
-
     def input(self):
         cmd = input(Fore.YELLOW + Style.BRIGHT + 'dbg> ' + Style.RESET_ALL)
         self.send(cmd)
@@ -199,126 +185,11 @@ class EnhancedCPU(CPU):
 
     # @override
     def execute(self, opcode, args):
-        # print(self.pc, format_instruction(opcode,args))
-
-        # run pre-hooks
-        for hook_condition, pre_hook, _ in list(self.hooks):
-            if hook_condition(self):
-                pre_hook(self)
-
-        if opcode.name == 'call':
-
-            # # skip call 6027 but set the proper post-exec values
-            if args[0] == 6027:
-                self.pc += len(opcode)
-                self.registers[0] = 6
-                self.registers[1] = 5
-                self.registers[7] = 25734  # secret value
-                return self.get_next_instruction()
-            # else:
-            #     self.call_stack.append(
-            #         lambda after, before=self.registers.copy():
-            #         my_ret_hook(before, after)
-            #     )
-            pass
-
-        # when a call returns, run the correspondng ret hook to cache the return values (if needed)
-        elif opcode.name == 'ret':
-            if not self.call_stack:
-                pass
-            elif ret_hook := self.call_stack.pop():
-                ret_hook(self.registers)
-
-        result = super().execute(opcode, args)
-
-        for hook_condition, _, post_hook in list(self.hooks):
-            if hook_condition(self):
-                post_hook(self)
-
-        return result
-
-def my_ret_hook(rv_before, rv_after):
-    return
-    idxs = (0,1)
-    print([rv_before[i] for i in idxs])
-    print([rv_after[i] for i in idxs])
-    print()
-
-
-def my_call_6027(r0, r1, r7):
-    if r0 == 0:
-        return r1 + 1
-
-    if r1 == 0:
-        return my_call_6027(r0 - 1, r7, r7) # a : runs b and c from r1 = (r7 to 0)
-
-    # n0 = my_call_6027(r0, r1 - 1, r7) # b : goes from r1 to 0
-    # return my_call_6027(r0 - 1, n0, r7)  # c :
-
-    return my_call_6027(
-        r0 = r0 - 1,
-        r1 = my_call_6027(r0, r1 - 1, r7),
-        r7 = r7
-    )
-
-# ------------------------------
-
-def split_6027(r0, r1, r7):
-    if r0 == 0:
-        return r1 + 1, r1
-
-    if r1 == 0:
-        return func_a(r0 - 1, r7, r7) # a : runs b and c from r1 = (r7 to 0)
-
-    n0, _ = func_b(r0, r1 - 1, r7) # b : goes from r1 to 0
-    return func_c(r0 - 1, n0, r7)  # c :
-
-
-func_a = lambda r0, _,r7: split_6027(r0 - 1, r7, r7)
-func_b = lambda r0,r1,r7: split_6027(r0, r1 - 1, r7)
-func_c = lambda r0,r1,r7: split_6027(r0 - 1, r1, r7)
-
-def gen_ret_hook(rv_in):
-    '''
-    Returns a function that caches the current register values for a given input.
-    Maps rv_in to 'rv_out' whose values are auto retrieved from the cpu.
-    '''
-
-    def write_cache(cpu):
-        rv_out = (cpu.r0, cpu.r1, cpu.r7)
-        cpu.call_cache[rv_in] = rv_out
-        return rv_out
-
-    return write_cache
-
-# ------------------------------
-
-def ret_condition(cpu: EnhancedCPU):
-    '''Returns true if the current instruction is a call'''
-
-    opcode, _ = cpu.get_next_instruction()
-    return opcode.name == 'ret'
-
-def ret_pre_hook(cpu):
-    # simply print registers
-    inst = format_instruction(*cpu.get_next_instruction())
-    # print(inst, cpu.registers, file=sys.stderr)
-
-def ret_post_hook(cpu):
-    ...
-
-# ------------------------------
-
-def call_condition(cpu: EnhancedCPU):
-    '''Returns true if the current instruction is a call'''
-
-    opcode, _ = cpu.get_next_instruction()
-    return opcode.name == 'call'
-
-def call_pre_hook(cpu):
-    # simply print registers
-    inst = format_instruction(*cpu.get_next_instruction())
-    # print(inst, cpu.registers, file=sys.stderr)
-
-def call_post_hook(cpu):
-    ...
+        # skip call 6027 but set the proper post-exec values
+        if opcode.name == 'call' and args[0] == 6027:
+            self.pc += len(opcode)
+            self.registers[0] = 6
+            self.registers[1] = 5
+            self.registers[7] = 25734  # secret value
+            return self.get_next_instruction()
+        return super().execute(opcode, args)
