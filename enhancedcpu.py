@@ -1,4 +1,5 @@
 import ast
+import re
 import readline
 import sys
 from pathlib import Path
@@ -148,11 +149,12 @@ class EnhancedCPU(CPU):
                     fname = Path('macros') / fname
                     print('running macros from:', fname)
                     with open(fname) as f:
-                        commands = f.read().strip().splitlines()
+                        commands = re.split(r'[\n;]+', f.read().strip())
 
-                    for cmd in commands:
-                        print(f'>>> sending "{cmd}"')
+                    for i, cmd in enumerate(commands):
+                        print(Fore.YELLOW + f'>>> [{i}/{len(commands)}] sending "{cmd}"' + Style.RESET_ALL)
                         self.send(cmd)
+                        print(self.read())
 
                 case ['quit' | 'q']:
                     exit()
@@ -163,8 +165,8 @@ class EnhancedCPU(CPU):
         except Exception as exc:
             print(exc)
 
-
     # @override
+
     def input(self):
         cmd = input(Fore.YELLOW + Style.BRIGHT + 'dbg> ' + Style.RESET_ALL)
         self.send(cmd)
@@ -200,45 +202,81 @@ class EnhancedCPU(CPU):
         # print(self.pc, format_instruction(opcode,args))
 
         # run pre-hooks
-        for cond_func, pre_hook, post_hook in self.hooks:
-            if cond_func(self):
+        for hook_condition, pre_hook, _ in list(self.hooks):
+            if hook_condition(self):
                 pre_hook(self)
 
         if opcode.name == 'call':
+
+            # # skip call 6027 but set the proper post-exec values
             if args[0] == 6027:
-                # check for cached result
-                rv_in = (self.r0, self.r1, self.r7)
-
-                # if found, restore pre-calculated registers and advance pc
-                if rv_out := self.call_cache.get(rv_in):
-                    # print('cache hit:', rv_in, rv_out)
-                    for ridx, regval in enumerate(rv_out):
-                        self.registers[ridx] = regval
-
-                    # we're skipping the call, so no need to update the call stack
-                    self.pc += len(opcode)
-                    return True
-
-                # if not found, schedule a new hook to record registers on ret
-                else:
-                    # print('cache miss:', rv_in)
-                    ret_hook = gen_ret_hook(rv_in)
-                    self.call_stack.append(ret_hook)
-
-            # add noop hook for all other calls
-            else:
-                self.call_stack.append(None)
+                self.pc += len(opcode)
+                self.registers[0] = 6
+                self.registers[1] = 5
+                self.registers[7] = 25734  # secret value
+                return self.get_next_instruction()
+            # else:
+            #     self.call_stack.append(
+            #         lambda after, before=self.registers.copy():
+            #         my_ret_hook(before, after)
+            #     )
+            pass
 
         # when a call returns, run the correspondng ret hook to cache the return values (if needed)
         elif opcode.name == 'ret':
             if not self.call_stack:
-                # print('ret call stack empty')
                 pass
             elif ret_hook := self.call_stack.pop():
-                rv_out = ret_hook(self)
-                # print('ret hook:', rv_out)
+                ret_hook(self.registers)
 
-        return super().execute(opcode, args)
+        result = super().execute(opcode, args)
+
+        for hook_condition, _, post_hook in list(self.hooks):
+            if hook_condition(self):
+                post_hook(self)
+
+        return result
+
+def my_ret_hook(rv_before, rv_after):
+    return
+    idxs = (0,1)
+    print([rv_before[i] for i in idxs])
+    print([rv_after[i] for i in idxs])
+    print()
+
+
+def my_call_6027(r0, r1, r7):
+    if r0 == 0:
+        return r1 + 1
+
+    if r1 == 0:
+        return my_call_6027(r0 - 1, r7, r7) # a : runs b and c from r1 = (r7 to 0)
+
+    # n0 = my_call_6027(r0, r1 - 1, r7) # b : goes from r1 to 0
+    # return my_call_6027(r0 - 1, n0, r7)  # c :
+
+    return my_call_6027(
+        r0 = r0 - 1,
+        r1 = my_call_6027(r0, r1 - 1, r7),
+        r7 = r7
+    )
+
+# ------------------------------
+
+def split_6027(r0, r1, r7):
+    if r0 == 0:
+        return r1 + 1, r1
+
+    if r1 == 0:
+        return func_a(r0 - 1, r7, r7) # a : runs b and c from r1 = (r7 to 0)
+
+    n0, _ = func_b(r0, r1 - 1, r7) # b : goes from r1 to 0
+    return func_c(r0 - 1, n0, r7)  # c :
+
+
+func_a = lambda r0, _,r7: split_6027(r0 - 1, r7, r7)
+func_b = lambda r0,r1,r7: split_6027(r0, r1 - 1, r7)
+func_c = lambda r0,r1,r7: split_6027(r0 - 1, r1, r7)
 
 def gen_ret_hook(rv_in):
     '''
@@ -253,6 +291,23 @@ def gen_ret_hook(rv_in):
 
     return write_cache
 
+# ------------------------------
+
+def ret_condition(cpu: EnhancedCPU):
+    '''Returns true if the current instruction is a call'''
+
+    opcode, _ = cpu.get_next_instruction()
+    return opcode.name == 'ret'
+
+def ret_pre_hook(cpu):
+    # simply print registers
+    inst = format_instruction(*cpu.get_next_instruction())
+    # print(inst, cpu.registers, file=sys.stderr)
+
+def ret_post_hook(cpu):
+    ...
+
+# ------------------------------
 
 def call_condition(cpu: EnhancedCPU):
     '''Returns true if the current instruction is a call'''
@@ -263,7 +318,7 @@ def call_condition(cpu: EnhancedCPU):
 def call_pre_hook(cpu):
     # simply print registers
     inst = format_instruction(*cpu.get_next_instruction())
-    print(inst, cpu.registers, file=sys.stderr)
+    # print(inst, cpu.registers, file=sys.stderr)
 
 def call_post_hook(cpu):
     ...
