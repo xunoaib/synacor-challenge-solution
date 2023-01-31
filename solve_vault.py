@@ -4,10 +4,6 @@ from dataclasses import dataclass
 from heapq import heappop, heappush
 from itertools import product, pairwise
 
-# addr 3951 = ?
-# addr 3952 = current puzzle number
-# addr 3953 = number of moves
-
 GRID_LIST = [
     ['*', 8,  '-',  1],
     [ 4, '*', 11,  '*'],
@@ -15,8 +11,13 @@ GRID_LIST = [
     [22, '-',  9,  '*'],
 ]
 
-GRID = {
-    (r,c): GRID_LIST[r][c] for r,c in product(range(4), range(4))
+GRID = {(r,c): GRID_LIST[r][c] for r,c in product(range(4), range(4))}
+
+DIR_TO_CMD = {
+    (-1,0): 'n',
+    (1,0): 's',
+    (0,1): 'e',
+    (0,-1): 'w',
 }
 
 @dataclass(frozen=True, order=True)
@@ -79,9 +80,11 @@ def main():
             break
 
         for next_state in next_states(state):
+            # avoid revisiting starting position
             if next_state.pos == start_pos:
                 continue
 
+            # avoid visiting goal unless puzzle is solved
             if next_state.pos == goal_pos and next_state.value != goal_val:
                 continue
 
@@ -89,6 +92,7 @@ def main():
                 visited[next_state] = state
                 heappush(q, (moves + 1, next_state))
 
+    # reconstruct solution
     solution = [state]
     while state := visited.get(state):
         solution.append(state)
@@ -97,30 +101,12 @@ def main():
     directions = []
     for s1, s2 in pairwise(solution[::-1]):
         roff, coff = [a - b for a, b in zip(s2.pos, s1.pos)]
-        match (roff, coff):
-            case (-1, 0):
-                command = 'n'
-            case (1, 0):
-                command = 's'
-            case (0, -1):
-                command = 'w'
-            case (0, 1):
-                command = 'e'
-            case _:
-                print("ya dun goof'd")
-                return
+        command = DIR_TO_CMD[(roff, coff)]
         directions.append(command)
 
     print(f'found {len(directions)} move solution after {iterations} iterations', file=sys.stderr)
     macro = ';'.join(directions)
     print(macro)
-
-    # execute solution and enter interactive mode
-    # vm = EnhancedCPU.from_snapshot_file('snapshots/vault')
-    # vm.send('take orb')
-    # vm.send(macro)
-    # print(vm.read())
-    # vm.interactive()
 
 if __name__ == '__main__':
     try:
