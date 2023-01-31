@@ -15,9 +15,9 @@ def f(r0, r1, r7):
 # induction from simple cases:
 #
 #   f(0, B) = B + 1
-#   f(1, B) = B + C + 1
-#   f(2, B) = B*(C+1) + 2*C + 1
-#   f(3, B) = f(3, f(3, B-1)) cant be simplified, and the recursive branch goes from B to 0
+#   f(1, B) = f(0, C) + B = B + C + 1
+#   f(2, B) = f(1, f(2, B-1)) = B*(C+1) + 2*C + 1
+#   f(3, B) = f(2, f(3, B-1)) cant be simplified, and the recursive branch goes from B to 0
 #   f(3, B) depends on f(3, B-1) so we can apply DP. recursion is impractical (~32768 max call depth)
 
 # working backwards from known inputs and the expected outcome:
