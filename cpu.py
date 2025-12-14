@@ -1,10 +1,11 @@
 import ast
 import copy
 
-from utils import to_register, isreg, read_instruction, load_bytecode
+from utils import isreg, load_bytecode, read_instruction, to_register
 
 
 class CPU:
+
     def __init__(self, fname=None):
         self.memory = []
         self.registers = [0] * 8
@@ -78,7 +79,7 @@ class CPU:
         returns true if the program has not halted.
         '''
         nextpc = self.pc + len(opcode)
-        a, b, c = args + (None,) * (3 - len(args))
+        a, b, c = args + (None, ) * (3 - len(args))
 
         match opcode.name:
             case 'noop':
@@ -150,7 +151,7 @@ class CPU:
             case 'not':
                 a = to_register(a)
                 b = self.readvalue(b)
-                self.set_register(a, ~b & (2**15-1))
+                self.set_register(a, ~b & (2**15 - 1))
 
             case 'call':
                 self.stack.append(nextpc)
@@ -220,7 +221,10 @@ class CPU:
         return self.__class__.from_snapshot(snapshot)
 
     def load_snapshot(self, snapshot: dict):
-        for attrib in ['memory', 'stack', 'registers', 'pc', 'input_buffer', 'output_buffer']:
+        for attrib in [
+            'memory', 'stack', 'registers', 'pc', 'input_buffer',
+            'output_buffer'
+        ]:
             setattr(self, attrib, copy.deepcopy(snapshot[attrib]))
 
     def __repr__(self):
@@ -273,6 +277,7 @@ class CPU:
     @property
     def r7(self):
         return self.registers[7]
+
 
 # for r in range(8):
 #     setattr(CPU, f'r{r}', lambda self: self.registers[r])

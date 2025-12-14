@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-from z3 import Solver, Int, Or
-from itertools import combinations, permutations, pairwise
+from itertools import combinations, pairwise, permutations
 
-from enhancedcpu import EnhancedCPU
+from z3 import Int, Or, Solver
+
 import utils
+from enhancedcpu import EnhancedCPU
 
 COIN_NAMES = {
     2: 'red coin',
@@ -15,18 +16,20 @@ COIN_NAMES = {
 
 COIN_VALS = [2, 3, 5, 7, 9]
 
+
 def solve_coin_order():
-    for a,b,c,d,e in permutations(COIN_VALS):
+    for a, b, c, d, e in permutations(COIN_VALS):
         if a + b * c**2 + d**3 - e == 399:
-            return [a,b,c,d,e]
+            return [a, b, c, d, e]
+
 
 def solve_coin_order_z3():
-    a,b,c,d,e = vals = [Int(chr(ord('a') + i)) for i in range(5)]
+    a, b, c, d, e = vals = [Int(chr(ord('a') + i)) for i in range(5)]
 
     s = Solver()
     s.add(a + b * c**2 + d**3 - e == 399)
 
-    for x,y in combinations(vals, 2):
+    for x, y in combinations(vals, 2):
         s.add(x != y)
 
     for v in vals:
@@ -42,6 +45,7 @@ def main():
 
     for coin in coins:
         print('use', COIN_NAMES[coin])
+
 
 if __name__ == '__main__':
     try:

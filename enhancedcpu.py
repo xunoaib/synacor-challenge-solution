@@ -3,23 +3,24 @@ import re
 import readline
 from pathlib import Path
 
-from cpu import CPU
-import utils
+from colorama import Fore, Style
 
-from colorama import Style, Fore
+import utils
+from cpu import CPU
 
 ALIASES = {
-    'l':'look',
-    'n':'north',
-    's':'south',
-    'e':'east',
-    'w':'west',
-    'br':'bridge',
-    'dw':'doorway',
-    'dn':'down',
-    'cn':'continue',
-    'pa':'passage',
+    'l': 'look',
+    'n': 'north',
+    's': 'south',
+    'e': 'east',
+    'w': 'west',
+    'br': 'bridge',
+    'dw': 'doorway',
+    'dn': 'down',
+    'cn': 'continue',
+    'pa': 'passage',
 }
+
 
 class EnhancedCPU(CPU):
 
@@ -31,7 +32,9 @@ class EnhancedCPU(CPU):
 
                 case ['dump', fname]:
                     if Path(fname).exists():
-                        if input(f'{fname} already exists. Overwrite? [y/N] ') != 'y':
+                        if input(
+                            f'{fname} already exists. Overwrite? [y/N] '
+                        ) != 'y':
                             return
                     with open(fname, 'w') as f:
                         f.write(repr(self))
@@ -68,7 +71,7 @@ class EnhancedCPU(CPU):
                     __import__('pprint').pprint(diffs)
 
                 case ['giveall']:
-                    for addr in range(2670, 2734+1, 4):
+                    for addr in range(2670, 2734 + 1, 4):
                         self.memory[addr] = 0
 
                 # write value to the STACK at address (0 = the bottom)
@@ -87,7 +90,7 @@ class EnhancedCPU(CPU):
                 case ['pm', addr, *nbytes]:
                     addr = int(addr)
                     nbytes = int(nbytes[0]) if nbytes else 1
-                    print(self.memory[addr:addr+nbytes])
+                    print(self.memory[addr:addr + nbytes])
 
                 case ['reg']:
                     print(self.registers)
@@ -95,11 +98,11 @@ class EnhancedCPU(CPU):
                 case ['ps', addr, *nbytes]:
                     addr = int(addr)
                     nbytes = int(nbytes[0]) if nbytes else 1
-                    print(self.stack[addr:addr+nbytes])
+                    print(self.stack[addr:addr + nbytes])
 
                 case ['pinv']:
-                    for addr in range(2670, 2734+1, 4):
-                        print(addr, self.memory[addr:addr+4])
+                    for addr in range(2670, 2734 + 1, 4):
+                        print(addr, self.memory[addr:addr + 4])
 
                 case ['loc']:
                     print(self.location)
@@ -122,10 +125,7 @@ class EnhancedCPU(CPU):
 
                 case ['solve', 'coins']:
                     coins = [
-                        'blue coin',
-                        'red coin',
-                        'shiny coin',
-                        'concave coin',
+                        'blue coin', 'red coin', 'shiny coin', 'concave coin',
                         'corroded coin'
                     ]
                     for coin in coins:
@@ -139,7 +139,11 @@ class EnhancedCPU(CPU):
                         commands = re.split(r'[\n;]+', f.read().strip())
 
                     for i, cmd in enumerate(commands):
-                        print(Fore.YELLOW + f'>>> [{i}/{len(commands)}] sending "{cmd}"' + Style.RESET_ALL)
+                        print(
+                            Fore.YELLOW
+                            + f'>>> [{i}/{len(commands)}] sending "{cmd}"'
+                            + Style.RESET_ALL
+                        )
                         self.send(cmd)
                         print(self.read())
 

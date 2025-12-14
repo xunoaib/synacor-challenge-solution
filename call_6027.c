@@ -9,8 +9,7 @@ int thread_count = 0;
 void *compute_f3(void *arg) {
     long thread_id = (long)arg;
     long f3[32768];
-    for (int i = 0; i < 32768; i++)
-        f3[i] = 0;
+    for (int i = 0; i < 32768; f3[i++]=0);
 
     long start = thread_id * 32768 / thread_count;
     long end = start + 32768 / thread_count;

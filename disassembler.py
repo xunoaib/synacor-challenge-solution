@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 import string
-from utils import read_instruction, isreg
+
+from utils import isreg, read_instruction
+
 
 def format_instruction_plain(opcode, args):
     # allows multi-character output format
@@ -30,10 +32,12 @@ def format_instruction_sensible(opcode, args):
         argregs = ''
     else:
         argregs = list(map(str, argregs))
-        mathsyms = {'and':'&', 'or':'|', 'mult':'*', 'mod':'%', 'add':'+'}
+        mathsyms = {'and': '&', 'or': '|', 'mult': '*', 'mod': '%', 'add': '+'}
         match opcode.name:
             case 'and' | 'or' | 'mult' | 'mod' | 'add':
-                return '{0} = {1} {3} {2}'.format(*argregs, mathsyms[opcode.name])
+                return '{0} = {1} {3} {2}'.format(
+                    *argregs, mathsyms[opcode.name]
+                )
             case 'set':
                 return '{} = {}'.format(*argregs)
             case 'not':
@@ -53,7 +57,9 @@ def format_instruction_sensible(opcode, args):
         argregs = ' '.join(map(str, argregs))
     return opcode.name + ' ' + argregs
 
+
 format_instruction = format_instruction_sensible
+
 
 def disassemble(memory: list[int], addr=0, lines=15):
     while addr < len(memory) and lines > 0:
@@ -66,14 +72,16 @@ def disassemble(memory: list[int], addr=0, lines=15):
                 outstring = chr(args[0])
                 next_addr = addr + len(opcode)
                 while True:
-                    next_opcode, next_args = read_instruction(memory, next_addr)
+                    next_opcode, next_args = read_instruction(
+                        memory, next_addr
+                    )
                     if next_opcode.name != 'out' or isreg(next_args[0]):
                         break
 
                     outstring += chr(next_args[0])
                     addr = next_addr
                     next_addr += len(opcode)
-                args = (outstring,)
+                args = (outstring, )
 
             print(curaddr, '', format_instruction(opcode, args))
             addr += len(opcode)
@@ -88,12 +96,14 @@ def disassemble(memory: list[int], addr=0, lines=15):
             print(addr, ' err %s' % val)
             addr += 1
 
+
 def main():
     from cpu import CPU
     vm = CPU('challenge.bin')
     # vm = CPU.from_snapshot_file('snapshots/start')
     # vm = CPU('call_6027.bin')
     disassemble(vm.memory, 0, 10000000)
+
 
 if __name__ == '__main__':
     try:

@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
-import re
 import pickle
-from heapq import heappush, heappop
+import re
+from heapq import heappop, heappush
 
 from enhancedcpu import EnhancedCPU
+
 
 def next_states(vm: EnhancedCPU):
     exits = get_exits(vm)
@@ -13,13 +14,18 @@ def next_states(vm: EnhancedCPU):
         vms.append((direction, n))
     return vms
 
+
 def get_exits(vm: EnhancedCPU):
     vm.read()
     vm = vm.sendcopy('look')
     data = vm.read()
-    if exitsstr := re.search(r'\nThere (is|are) (\d+) exits?:\n(.*)\nWhat do you do?', data, re.DOTALL):
+    if exitsstr := re.search(
+        r'\nThere (is|are) (\d+) exits?:\n(.*)\nWhat do you do?', data,
+        re.DOTALL
+    ):
         return re.findall(r'- (.*?)\n', exitsstr.group(3))
     return []
+
 
 def explore(current: EnhancedCPU):
     '''Explore all possible paths from the given CPU state. Cycles are skipped'''
@@ -39,7 +45,9 @@ def explore(current: EnhancedCPU):
         print(descriptions[current.location])
 
         states = list(next_states(current))
-        edges[current.location] = [(neighbor.location, next_move) for next_move, neighbor in states]
+        edges[current.location] = [
+            (neighbor.location, next_move) for next_move, neighbor in states
+        ]
         for _, neighbor in states:
             if neighbor.location not in vms:
                 neighbor.read()
@@ -50,11 +58,13 @@ def explore(current: EnhancedCPU):
 
     return edges, descriptions, vms
 
+
 # def find_path(edges: dict, src_vm: EnhancedCPU, tar_loc):
 #     q = [(0, src_vm.location)]
 #
 #     while q:
 #         cost, loc = heappop(q)
+
 
 def main():
     # vm = EnhancedCPU('challenge.bin')
@@ -90,6 +100,7 @@ def main():
         #     vms[loc].interactive()
         print()
         print(desc)
+
 
 if __name__ == '__main__':
     try:

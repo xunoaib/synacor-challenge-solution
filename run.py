@@ -4,6 +4,7 @@ import string
 
 from enhancedcpu import EnhancedCPU
 
+
 def dump_text_section():
     vm = EnhancedCPU.from_snapshot_file('snapshots/start')
 
@@ -14,6 +15,7 @@ def dump_text_section():
             ch = '\n\n'
         s += ch
     print(s)
+
 
 def dump_text_section_addrs():
     vm = EnhancedCPU.from_snapshot_file('snapshots/start')
@@ -33,14 +35,26 @@ def dump_text_section_addrs():
             print(f'>>>{addr}<<<', v)
         addr += 1
 
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--commands')
     args = parser.parse_args()
 
-    vm = EnhancedCPU('challenge.bin')
-    # vm = EnhancedCPU.from_snapshot_file('snapshots/start')  # skip slow initialization
-    # vm = EnhancedCPU.from_snapshot_file('snapshots/teleported')
+    # vm = EnhancedCPU('challenge.bin')
+    vm = EnhancedCPU.from_snapshot_file(
+        'snapshots/start'
+    )  # skip slow initialization
+
+    # # dump binary call 6027 data
+    # from utils import to_register, isreg, read_instruction, load_bytecode
+    # addr = 6027
+    # while addr <= 6068:
+    #     opcode, args = instr = read_instruction(vm.memory, addr)
+    #     print(str(vm.memory[addr:addr+len(opcode)])[1:-1])
+    #     addr += len(opcode)
+    # # vm = EnhancedCPU.from_snapshot_file('snapshots/teleported')
+    # return
 
     print(vm.read())
     if args.commands:
@@ -48,6 +62,7 @@ def main():
             vm.send(cmd.strip())
             print(vm.read())
     vm.interactive()
+
 
 if __name__ == '__main__':
     try:
