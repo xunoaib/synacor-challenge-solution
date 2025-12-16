@@ -17,20 +17,6 @@ def neighbor_locs(vm: EnhancedCPU) -> list[tuple[str, EnhancedCPU]]:
     return vms
 
 
-def neighbor_items(vm: EnhancedCPU):
-    items = find_items(vm)
-    vms = []
-    for item in items:
-        cmd = 'take ' + item
-        n = vm.sendcopy(cmd)
-        vms.append((cmd, n))
-    return vms
-
-
-def all_neighbors(vm: EnhancedCPU):
-    return neighbor_items(vm) + neighbor_locs(vm)
-
-
 def find_items(vm: EnhancedCPU):
     vm.read()
     vm = vm.sendcopy('look')
@@ -57,6 +43,21 @@ def find_exits(vm: EnhancedCPU):
     return []
 
 
+def identify_item_addrs(vms: list[EnhancedCPU]):
+    addrs = {}
+    for vm in vms:
+        if items := find_items(vm):
+            for item in items:
+                vm2 = vm.sendcopy('take ' + item)
+                result = utils.diff_vms(vm, vm2)
+                addr = next(
+                    idx for idx, old, new in result.get('memory', [])
+                    if old and not new
+                )
+                addrs[item] = addr
+    return addrs
+
+
 def explore(current: EnhancedCPU, verbose=True):
     '''Explore all possible paths from the given CPU state. Cycles are skipped'''
 
@@ -80,50 +81,94 @@ def explore(current: EnhancedCPU, verbose=True):
             print(descriptions[current.location])
 
         states = list(neighbor_locs(current))
-        edges[current.location] = [
-            (neighbor.location, next_move) for next_move, neighbor in states
-        ]
-        for _, neighbor in states:
-            if neighbor.location not in vms:
-                neighbor.read()
-                neighbor.send('look')
-                descriptions[neighbor.location] = neighbor.read().strip()
-                vms[neighbor.location] = neighbor
-                q.append(neighbor)
+        edges[current.location] = [(n.location, move) for move, n in states]
+        for _, n in states:
+            if n.location not in vms:
+                n.read()
+                n.send('look')
+                descriptions[n.location] = n.read().strip()
+                vms[n.location] = n
+                q.append(n)
 
     return edges, descriptions, vms
-
-
-# def find_path(edges: dict, src_vm: EnhancedCPU, tar_loc):
-#     q = [(0, src_vm.location)]
-#
-#     while q:
-#         cost, loc = heappop(q)
 
 
 def main():
     # vm = EnhancedCPU('challenge.bin')
     vm = EnhancedCPU.from_snapshot_file('snapshots/start')
+
     # vm.send('.giveall')
     # vm = EnhancedCPU.from_snapshot_file('snapshots/ladder')
     # vm = EnhancedCPU.from_snapshot_file('snapshots/beach')
 
-    # Find all states (without picking up items)
-    edges, descs, vms = explore(vm, verbose=False)
+    known_locs = {}
 
-    # Find states with items
-    item_addrs = []
-    for loc, vm in vms.items():
-        if items := find_items(vm):
-            for item in items:
-                vm2 = vm.sendcopy('take ' + item)
-                result = utils.diff_vms(vm, vm2)
-                # print(f'took {item} => {result}')
-                addr = next(
-                    idx for idx, old, new in result.get('memory', [])
-                    if old and not new
-                )
-                print(f'took {item} => {addr}')
+    def print_new_locs():
+        nonlocal known_locs
+        for loc in set(vms) - set(known_locs):
+            v = vms[loc]
+            v.read()
+            d = v.sendcopy('look').read()
+            if m := re.search(r'== (.*?) ==', d):
+                d = m.group(1)
+            print(f'New location: {loc} ({d})')
+        known_locs |= vms
+
+    def find_all_states():
+        edges, descs, vms = explore(vm, verbose=False)
+        item_addrs = identify_item_addrs(list(vms.values()))
+        print(f'Found {len(vms)} states and {len(item_addrs)} items')
+        # print(item_addrs)
+        print()
+        return descs, vms, item_addrs
+
+    def take_all_items():
+        print()
+        for name, addr in item_addrs.items():
+            print(f'Giving mem[{addr}] = {name}')
+            vm.memory[addr] = 0
+        print()
+
+    descs, vms, item_addrs = find_all_states()
+    print_new_locs()
+    take_all_items()
+
+    print('>> Using can and lantern')
+    vm.send('use can')
+    vm.send('use lantern')
+
+    descs, vms, item_addrs = find_all_states()
+    print_new_locs()
+    take_all_items()
+
+    # Go to central hall
+    vm.location = next(
+        loc for loc, desc in descs.items() if
+        'There is a strange monument in the center of the hall with circular slots and unusual'
+        in desc
+    )
+
+    # Solve coins puzzle
+    print('>> Solving coins puzzle')
+    vm.send('use blue coin')
+    vm.send('use red coin')
+    vm.send('use shiny coin')
+    vm.send('use concave coin')
+    vm.send('use corroded coin')
+
+    descs, vms, item_addrs = find_all_states()
+    print_new_locs()
+    take_all_items()
+
+    print('>> Using teleporter')
+    vm.send('use teleporter')
+
+    descs, vms, item_addrs = find_all_states()
+    print_new_locs()
+    take_all_items()
+
+    print(vm.flush().sendcopy('look strange book').read())
+    vm.interactive()
 
     return
 
