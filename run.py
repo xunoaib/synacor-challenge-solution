@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import argparse
 import string
+import sys
 
 from enhancedcpu import EnhancedCPU
 
@@ -9,12 +10,13 @@ def dump_text_section():
     vm = EnhancedCPU.from_snapshot_file('snapshots/start')
 
     s = ''
-    for v in vm.memory[6072:]:
+    start_idx = 6072
+    for i, v in enumerate(vm.memory[start_idx:], start=start_idx):
         ch = chr(v)
         if ch not in string.printable:
             ch = '\n\n'
         s += ch
-    print(s)
+    print(f'\033[92m{start_idx}:\033[0m {repr(s)}')
 
 
 def dump_text_section_addrs():
@@ -64,7 +66,9 @@ def main():
 
 if __name__ == '__main__':
     try:
-        main()
-        # dump_text_section()
+        if '-dt' in sys.argv:
+            dump_text_section()
+        else:
+            main()
     except (KeyboardInterrupt, EOFError, BrokenPipeError):
         pass

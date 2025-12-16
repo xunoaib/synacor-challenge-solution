@@ -2,6 +2,8 @@
 import json
 import pickle
 import re
+import string
+import sys
 from heapq import heappop, heappush
 
 import utils
@@ -93,9 +95,47 @@ def explore(current: EnhancedCPU, verbose=True):
     return edges, descriptions, vms
 
 
+def bruteforce_location_addrs(vm: EnhancedCPU):
+
+    known_locs = [
+        2317, 2322, 2327, 2332, 2337, 2342, 2347, 2352, 2357, 2362, 2367, 2372,
+        2377, 2382, 2387, 2392, 2397, 2402, 2407, 2417, 2422, 2427, 2432, 2437,
+        2442, 2447, 2452, 2457, 2463, 2468, 2473, 2478, 2483, 2488, 2493, 2648,
+        2653, 2658, 2663
+    ]
+
+    new_locs = {}
+
+    vm.read()
+    for loc in range(2300, 3000):
+        if loc in known_locs:
+            continue
+
+        v = vm.clone()
+        v.location = loc
+        try:
+            text = v.sendcopy('look').read()
+            l = v.location
+            if l not in known_locs and all(
+                c in string.printable for c in text
+            ):
+                print('Adding', l)
+                new_locs[l] = text
+        except (KeyError, IndexError):
+            pass
+
+    for l, text in sorted(new_locs.items()):
+        print(l, repr(text))
+        print()
+
+
 def main():
     # vm = EnhancedCPU('challenge.bin')
     vm = EnhancedCPU.from_snapshot_file('snapshots/start')
+
+    if '-b' in sys.argv:
+        bruteforce_location_addrs(vm)
+        exit()
 
     # vm.send('.giveall')
     # vm = EnhancedCPU.from_snapshot_file('snapshots/ladder')
@@ -167,8 +207,31 @@ def main():
     print_new_locs()
     take_all_items()
 
-    print(vm.flush().sendcopy('look strange book').read())
-    vm.interactive()
+    print('>> Using teleporter again')
+    vm.registers[7] = 25734
+    vm.send('use teleporter')
+
+    descs, vms, item_addrs = find_all_states()
+    print_new_locs()
+    take_all_items()
+
+    # Go to antechamber
+    vm.location = next(
+        loc for loc, desc in descs.items() if '== Vault Antechamber ==' in desc
+    )
+
+    # Solver antechamber
+    vm.send('look')
+    vm.send('take orb')
+    vm.send('n;e;e;n;w;s;e;e;w;n;n;e')
+    vm.send('vault')
+    vm.send('take mirror')
+    vm.read()
+    vm.send('use mirror')
+
+    # print(vm.flush().sendcopy('look strange book').read())
+    print(vm.read())
+    # vm.interactive()
 
     return
 
