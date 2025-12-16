@@ -27,6 +27,9 @@ class EnhancedCPU(CPU):
     def debug_cmd(self, cmd):
         try:
             match cmd.split():
+                case ['ticks']:
+                    print(f'ticks = {self.ticks}')
+
                 case ['dump']:
                     print(repr(self))
 

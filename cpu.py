@@ -13,6 +13,7 @@ class CPU:
         self.pc = 0  # program counter
         self.input_buffer = []  # keyboard input buffer
         self.output_buffer = ''
+        self.ticks = 0
 
         if fname:
             self.load_program(fname)
@@ -71,6 +72,7 @@ class CPU:
 
     def step(self):
         opcode, args = self.get_next_instruction()
+        self.ticks += 1
         return self.execute(opcode, args)
 
     def execute(self, opcode, args):
