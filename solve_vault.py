@@ -2,29 +2,31 @@
 import sys
 from dataclasses import dataclass
 from heapq import heappop, heappush
-from itertools import product, pairwise
+from itertools import pairwise, product
 
 GRID_LIST = [
-    ['*', 8,  '-',  1],
-    [ 4, '*', 11,  '*'],
-    ['+', 4,  '-', 18],
-    [22, '-',  9,  '*'],
+    ['*', 8, '-', 1],
+    [4, '*', 11, '*'],
+    ['+', 4, '-', 18],
+    [22, '-', 9, '*'],
 ]
 
-GRID = {(r,c): GRID_LIST[r][c] for r,c in product(range(4), range(4))}
+GRID = {(r, c): GRID_LIST[r][c] for r, c in product(range(4), range(4))}
 
 DIR_TO_CMD = {
-    (-1,0): 'n',
-    (1,0): 's',
-    (0,1): 'e',
-    (0,-1): 'w',
+    (-1, 0): 'n',
+    (1, 0): 's',
+    (0, 1): 'e',
+    (0, -1): 'w',
 }
+
 
 @dataclass(frozen=True, order=True)
 class State:
     pos: tuple[int, int]
     value: int = 0
     op: str | None = '+'
+
 
 def move_state(state: State, newpos: tuple[int, int]):
     '''Moves a given state to the new position. Returns a modified copy'''
@@ -48,12 +50,14 @@ def move_state(state: State, newpos: tuple[int, int]):
 
     return State(newpos, newvalue, newop)
 
-def neighbors(r,c):
-    for roff in (-1,0,1):
-        for coff in (-1,0,1):
+
+def neighbors(r, c):
+    for roff in (-1, 0, 1):
+        for coff in (-1, 0, 1):
             newpos = r + roff, c + coff
             if (roff, coff) != (0, 0) and 0 in (roff, coff) and newpos in GRID:
                 yield newpos
+
 
 def next_states(state):
     states = []
@@ -62,9 +66,10 @@ def next_states(state):
         states.append(newstate)
     return states
 
+
 def main():
-    goal_val = 30       # target value to reach
-    goal_pos = (0, 3)   # end at the upper right corner
+    goal_val = 30  # target value to reach
+    goal_pos = (0, 3)  # end at the upper right corner
     start_pos = (3, 0)  # start at the lower left corner
     state = State(start_pos, GRID[start_pos])
 
@@ -104,9 +109,13 @@ def main():
         command = DIR_TO_CMD[(roff, coff)]
         directions.append(command)
 
-    print(f'found {len(directions)} move solution after {iterations} iterations', file=sys.stderr)
+    print(
+        f'found {len(directions)} move solution after {iterations} iterations',
+        file=sys.stderr
+    )
     macro = ';'.join(directions)
     print(macro)
+
 
 if __name__ == '__main__':
     try:

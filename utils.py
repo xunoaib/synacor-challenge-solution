@@ -2,8 +2,10 @@ import re
 import string
 from dataclasses import dataclass
 from itertools import zip_longest
-from rich.table import Table
+
 from rich.console import Console
+from rich.table import Table
+
 
 @dataclass
 class Opcode:
@@ -14,28 +16,33 @@ class Opcode:
     def __len__(self):
         return 1 + self.nargs
 
+
 def load_bytecode(fname):
     with open(fname, 'rb') as f:
         data = f.read()
 
     return [
-        int.from_bytes(data[i:i+2], 'little')
+        int.from_bytes(data[i:i + 2], 'little')
         for i in range(0, len(data), 2)
     ]
 
+
 def isreg(arg):
     return arg >= 32768
+
 
 def to_register(arg):
     if isreg(arg):
         return arg - 32768
     return arg
 
+
 def read_instruction(memory, addr):
     opid = memory[addr]
     opcode = OPCODES[opid]
-    args = tuple(memory[addr+1:addr+1+opcode.nargs])
+    args = tuple(memory[addr + 1:addr + 1 + opcode.nargs])
     return opcode, args
+
 
 def parse_opcodes():
     with open('arch-spec') as f:
@@ -48,7 +55,9 @@ def parse_opcodes():
         opcodes[opid] = Opcode(name, opid, nargs)
     return opcodes
 
+
 OPCODES = parse_opcodes()
+
 
 def diff_snapshot(snap1, snap2):
     diff_result = {}
@@ -60,20 +69,26 @@ def diff_snapshot(snap1, snap2):
             continue
 
         if isinstance(v1, list):
-            diff_result[key] = [(idx, subv1, subv2) for idx, (subv1, subv2) in
-                                enumerate(zip_longest(v1, v2)) if subv1 != subv2]
+            diff_result[key] = [
+                (idx, subv1, subv2)
+                for idx, (subv1, subv2) in enumerate(zip_longest(v1, v2))
+                if subv1 != subv2
+            ]
         else:
             diff_result[key] = (v1, v2)
     return diff_result
 
+
 def diff_vms(v1, v2):
     return diff_snapshot(v1.snapshot(), v2.snapshot())
+
 
 def rprint_diff(diff):
     console = Console()
     for section, vals in diff.items():
         table = diff_table(vals, section.capitalize())
         console.print(table)
+
 
 def diff_table(section_data, title):
     table = Table(title=title)
@@ -82,7 +97,7 @@ def diff_table(section_data, title):
 
     for vals in section_data:
         vals = list(vals)
-        for i,v in enumerate(vals):
+        for i, v in enumerate(vals):
             if v < 256 and chr(v) in string.printable:
                 vals[i] = f"'[bold green]{chr(v)}[/bold green]' {v}"
         table.add_row(*map(str, vals))
