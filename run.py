@@ -41,10 +41,8 @@ def main():
     parser.add_argument('-c', '--commands')
     args = parser.parse_args()
 
-    # vm = EnhancedCPU('challenge.bin')
-    vm = EnhancedCPU.from_snapshot_file(
-        'snapshots/start'
-    )  # skip slow initialization
+    vm = EnhancedCPU('challenge.bin')
+    # vm = EnhancedCPU.from_snapshot_file('snapshots/start')
 
     # # dump binary call 6027 data
     # from utils import to_register, isreg, read_instruction, load_bytecode

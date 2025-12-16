@@ -224,8 +224,12 @@ class CPU:
 
     def load_snapshot(self, snapshot: dict):
         for attrib in [
-            'memory', 'stack', 'registers', 'pc', 'input_buffer',
-            'output_buffer'
+            'memory',
+            'stack',
+            'registers',
+            'pc',
+            'input_buffer',
+            'output_buffer',
         ]:
             setattr(self, attrib, copy.deepcopy(snapshot[attrib]))
 
@@ -247,38 +251,6 @@ class CPU:
         vm = cls()
         vm.load_snapshot(snapshot)
         return vm
-
-    @property
-    def r0(self):
-        return self.registers[0]
-
-    @property
-    def r1(self):
-        return self.registers[1]
-
-    @property
-    def r2(self):
-        return self.registers[2]
-
-    @property
-    def r3(self):
-        return self.registers[3]
-
-    @property
-    def r4(self):
-        return self.registers[4]
-
-    @property
-    def r5(self):
-        return self.registers[5]
-
-    @property
-    def r6(self):
-        return self.registers[6]
-
-    @property
-    def r7(self):
-        return self.registers[7]
 
 
 # for r in range(8):
