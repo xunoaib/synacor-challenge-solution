@@ -1,6 +1,7 @@
 import ast
 import copy
 
+from config import LOCATION_ADDR
 from utils import isreg, load_bytecode, read_instruction, to_register
 
 
@@ -32,11 +33,11 @@ class CPU:
 
     @property
     def location(self):
-        return self.memory[2732]
+        return self.memory[LOCATION_ADDR]
 
     @location.setter
     def location(self, value: int):
-        self.memory[2732] = value
+        self.memory[LOCATION_ADDR] = value
 
     def input(self):
         self.send(input('cpu> '))
