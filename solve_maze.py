@@ -131,7 +131,9 @@ def bruteforce_location_addrs(vm: EnhancedCPU):
 
 def main():
     # vm = EnhancedCPU('challenge.bin')
-    vm = EnhancedCPU.from_snapshot_file('snapshots/start')
+    # vm = EnhancedCPU.from_snapshot_file('snapshots/start')
+    vm = EnhancedCPU('challenge-aneurysm.bin')
+    vm.run()
 
     if '-b' in sys.argv:
         bruteforce_location_addrs(vm)
