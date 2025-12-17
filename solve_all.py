@@ -5,6 +5,11 @@ import utils
 from enhancedcpu import EnhancedCPU
 
 
+def reflect(s: str):
+    d = {'d': 'b', 'b': 'd', 'p': 'q', 'q': 'p'}
+    return ''.join(d.get(c, c) for c in s)[::-1]
+
+
 def neighbor_locs(vm: EnhancedCPU) -> list[tuple[str, EnhancedCPU]]:
     exits = find_exits(vm)
     vms = []
@@ -186,7 +191,7 @@ def main():
     m = re.search(
         r'you think you see a pattern in the stars...\n\s+(.*?)\n', data
     )
-    assert m, 'Missing code (first teleport)'
+    assert m, 'Missing first teleport code'
     print(f'\033[92mCode #6: {m.group(1)}\033[0m')
 
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
@@ -201,7 +206,7 @@ def main():
         r'Someone seems to have drawn a message in the sand here:\n\s+(.*?)\n',
         data
     )
-    assert m, 'Missing code 5 (second teleport)'
+    assert m, 'Missing second teleport code'
     print(f'\033[92mCode #7: {m.group(1)}\033[0m')
 
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
@@ -224,7 +229,7 @@ def main():
     if m := re.search(
         'Through the mirror, you see "(.*)" scrawled in charcoal', resp
     ):
-        print('\033[92mCode #8: ' + m.group(1) + '\033[0m')
+        print('\033[92mCode #8: ' + reflect(m.group(1)) + '\033[0m')
     else:
         print('\033[91mError! Last code not found\033[0m')
 
