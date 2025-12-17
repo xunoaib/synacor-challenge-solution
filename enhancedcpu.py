@@ -2,6 +2,7 @@ import ast
 import re
 import readline
 from pathlib import Path
+from typing import override
 
 from colorama import Fore, Style
 
@@ -22,11 +23,16 @@ ALIASES = {
 }
 
 
+class DummyError(Exception):
+    pass
+
+
 class EnhancedCPU(CPU):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.teleport_call_addr: int | None = None
+        self.is_interactive = False
 
     def debug_cmd(self, cmd):
         try:
@@ -160,10 +166,19 @@ class EnhancedCPU(CPU):
                 case _:
                     print('unknown debug command')
 
-        except Exception as exc:
+        # except Exception as exc:
+        #     print(exc)
+
+        except DummyError as exc:
             print(exc)
 
-    # @override
+    @override
+    def interactive(self):
+        self.is_interactive = False
+        super().interactive()
+        self.is_interactive = True
+
+    @override
     def input(self):
         cmd = input(Fore.YELLOW + Style.BRIGHT + 'dbg> ' + Style.RESET_ALL)
         self.send(cmd)
@@ -175,7 +190,7 @@ class EnhancedCPU(CPU):
         vm.send(cmd)
         return vm
 
-    # @override
+    @override
     def send(self, cmd):
         if ';' in cmd:
             # prevent these from interfering with breakpoints?
@@ -186,7 +201,7 @@ class EnhancedCPU(CPU):
         # intercept special debug commands
         if cmd.startswith('.'):
             self.debug_cmd(cmd[1:])
-            return True
+            return
 
         if newcmd := ALIASES.get(cmd):
             print(f'# aliased {cmd} => {newcmd}')
@@ -194,9 +209,14 @@ class EnhancedCPU(CPU):
 
         super().send(cmd)
 
+    def sendread(self, cmd):
+        self.read()
+        self.send(cmd)
+        return self.read()
+
     # @override
     def execute(self, opcode, args):
-        # skip call 6027 but set the proper post-exec values
+        # skip slow call but set the proper post-exec values
         if opcode.name == 'call' and args[0] == self.teleport_call_addr:
             self.pc += len(opcode)
             self.registers[0] = 6
@@ -204,3 +224,6 @@ class EnhancedCPU(CPU):
             self.registers[7] = 25734  # secret value
             return self.get_next_instruction()
         return super().execute(opcode, args)
+
+    def patch_teleporter_call(self):
+        self.teleport_call_addr = utils.find_teleporter_call(self.memory)

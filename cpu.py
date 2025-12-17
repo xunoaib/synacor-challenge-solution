@@ -1,8 +1,8 @@
 import ast
 import copy
 
-from config import LOCATION_ADDR
-from utils import isreg, load_bytecode, read_instruction, to_register
+from utils import (calculate_location_addr, isreg, load_bytecode,
+                   read_instruction, to_register)
 
 
 class CPU:
@@ -15,6 +15,7 @@ class CPU:
         self.input_buffer = []  # keyboard input buffer
         self.output_buffer = ''
         self.ticks = 0
+        self.location_addr: int | None = None
 
         if fname:
             self.load_program(fname)
@@ -22,6 +23,8 @@ class CPU:
     def load_program(self, fname):
         self.memory = load_bytecode(fname)
         self.pc = 0
+        print('Calculating location address')
+        self.location_addr = calculate_location_addr(self)
 
     def readvalue(self, arg):
         if isreg(arg):
@@ -33,17 +36,19 @@ class CPU:
 
     @property
     def location(self):
-        return self.memory[LOCATION_ADDR]
+        assert self.location_addr is not None, 'Location address not set'
+        return self.memory[self.location_addr]
 
     @location.setter
     def location(self, value: int):
-        self.memory[LOCATION_ADDR] = value
+        assert self.location_addr is not None, 'Location address not set'
+        self.memory[self.location_addr] = value
 
     def input(self):
         self.send(input('cpu> '))
 
-    def send(self, data):
-        self.input_buffer = list(data + '\n')
+    def send(self, cmd):
+        self.input_buffer = list(cmd + '\n')
         self.run()
 
     def interactive(self):
@@ -221,6 +226,7 @@ class CPU:
             'pc': self.pc,
             'input_buffer': self.input_buffer,
             'output_buffer': self.output_buffer,
+            'location_addr': self.location_addr,
         }
 
     def clone(self):
@@ -229,12 +235,8 @@ class CPU:
 
     def load_snapshot(self, snapshot: dict):
         for attrib in [
-            'memory',
-            'stack',
-            'registers',
-            'pc',
-            'input_buffer',
-            'output_buffer',
+            'memory', 'stack', 'registers', 'pc', 'input_buffer',
+            'output_buffer', 'location_addr'
         ]:
             setattr(self, attrib, copy.deepcopy(snapshot[attrib]))
 

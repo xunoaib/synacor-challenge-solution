@@ -1,7 +1,5 @@
 import argparse
 import re
-import string
-import sys
 
 import utils
 from enhancedcpu import EnhancedCPU
@@ -14,20 +12,6 @@ def neighbor_locs(vm: EnhancedCPU) -> list[tuple[str, EnhancedCPU]]:
         n = vm.sendcopy(direction)
         vms.append((direction, n))
     return vms
-
-
-def find_items(vm: EnhancedCPU):
-    vm = vm.clone()
-    vm.read()
-    vm.send('look')
-    data = vm.read()
-
-    if m := re.search(
-        r'\nThings of interest here:\n(.*?)\n\n', data, re.DOTALL
-    ):
-        return re.findall(r'- (.*?)\n', m.group(1) + '\n')
-
-    return []
 
 
 def find_exits(vm: EnhancedCPU):
@@ -44,38 +28,46 @@ def find_exits(vm: EnhancedCPU):
     return []
 
 
+def find_items(vm: EnhancedCPU):
+    vm = vm.clone()
+    vm.read()
+    vm.send('look')
+    data = vm.read()
+    m = re.search(r'\nThings of interest here:\n(.*?)\n\n', data, re.DOTALL)
+    return re.findall(r'- (.*?)\n', m.group(1) + '\n') if m else []
+
+
 def identify_item_addrs(vms: list[EnhancedCPU]):
     addrs = {}
     for vm in vms:
-        if items := find_items(vm):
-            for item in items:
-                vm2 = vm.sendcopy('take ' + item)
-                result = utils.diff_vms(vm, vm2)
-                addr = next(
-                    idx for idx, old, new in result.get('memory', [])
-                    if old and not new
-                )
-                addrs[item] = addr
+        for item in find_items(vm):
+            vm2 = vm.sendcopy('take ' + item)
+            result = utils.diff_vms(vm, vm2)
+            addr = next(
+                idx for idx, old, new in result.get('memory', [])
+                if old and not new
+            )
+            addrs[item] = addr
     return addrs
 
 
-def explore(current: EnhancedCPU):
+def explore(vm: EnhancedCPU):
     '''Explore all possible paths from the given CPU state. Cycles are skipped'''
 
-    current.read()
-    current.send('look')  # NOTE: won't show previous output
+    vm.read()
+    vm.send('look')  # NOTE: won't show previous output
 
     vms: dict[int, EnhancedCPU] = {}
     # map current vm location => [(north_room_id, 'north'), ...]
     edges: dict[int, list[tuple[int, str]]] = {}
-    descriptions = {current.location: current.read().strip()}
+    descriptions = {vm.location: vm.read().strip()}
 
-    q = [current]
+    q = [vm]
 
     while q:
-        current = q.pop(0)
-        states = list(neighbor_locs(current))
-        edges[current.location] = [(n.location, move) for move, n in states]
+        vm = q.pop(0)
+        states = list(neighbor_locs(vm))
+        edges[vm.location] = [(n.location, move) for move, n in states]
         for _, n in states:
             if n.location not in vms:
                 descriptions[n.location] = n.read().strip()
@@ -83,40 +75,6 @@ def explore(current: EnhancedCPU):
                 q.append(n)
 
     return edges, descriptions, vms
-
-
-def bruteforce_location_addrs(vm: EnhancedCPU):
-
-    known_locs = [
-        2317, 2322, 2327, 2332, 2337, 2342, 2347, 2352, 2357, 2362, 2367, 2372,
-        2377, 2382, 2387, 2392, 2397, 2402, 2407, 2417, 2422, 2427, 2432, 2437,
-        2442, 2447, 2452, 2457, 2463, 2468, 2473, 2478, 2483, 2488, 2493, 2648,
-        2653, 2658, 2663
-    ]
-
-    new_locs = {}
-
-    vm.read()
-    for loc in range(2300, 3000):
-        if loc in known_locs:
-            continue
-
-        v = vm.clone()
-        v.location = loc
-        try:
-            text = v.sendcopy('look').read()
-            l = v.location
-            if l not in known_locs and all(
-                c in string.printable for c in text
-            ):
-                print('Adding', l)
-                new_locs[l] = text
-        except (KeyError, IndexError):
-            pass
-
-    for l, text in sorted(new_locs.items()):
-        print(l, repr(text))
-        print()
 
 
 def main():
@@ -128,10 +86,6 @@ def main():
 
     vm = EnhancedCPU(args.file)
     vm.run()
-
-    if '-b' in sys.argv:
-        bruteforce_location_addrs(vm)
-        exit()
 
     def print_new_locs(known_locs, vms):
         for loc in set(vms) - set(known_locs):
@@ -200,7 +154,7 @@ def main():
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
     print('>> Using teleporter again')
-    vm.teleport_call_addr = utils.find_teleporter_call(vm.memory)
+    vm.patch_teleporter_call()
     vm.registers[7] = 25734
     vm.send('use teleporter')
 

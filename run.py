@@ -41,20 +41,13 @@ def dump_text_section_addrs():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--commands')
+    parser.add_argument('-f', '--file', default='challenge.bin')
     args = parser.parse_args()
 
-    vm = EnhancedCPU('challenge.bin')
-    # vm = EnhancedCPU.from_snapshot_file('snapshots/start')
+    print('Loading binary:', args.file)
 
-    # # dump binary call 6027 data
-    # from utils import to_register, isreg, read_instruction, load_bytecode
-    # addr = 6027
-    # while addr <= 6068:
-    #     opcode, args = instr = read_instruction(vm.memory, addr)
-    #     print(str(vm.memory[addr:addr+len(opcode)])[1:-1])
-    #     addr += len(opcode)
-    # # vm = EnhancedCPU.from_snapshot_file('snapshots/teleported')
-    # return
+    vm = EnhancedCPU(args.file)
+    # vm = EnhancedCPU.from_snapshot_file('snapshots/start')
 
     print(vm.read())
     if args.commands:

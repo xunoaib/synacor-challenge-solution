@@ -1,6 +1,5 @@
 import argparse
 import string
-import sys
 
 from utils import isreg, read_instruction
 

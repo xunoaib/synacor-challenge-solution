@@ -1,7 +1,7 @@
 import re
 import string
 from dataclasses import dataclass
-from itertools import zip_longest
+from itertools import pairwise, zip_longest
 
 from rich.console import Console
 from rich.table import Table
@@ -125,3 +125,21 @@ def find_teleporter_call(memory: list[int]):
     addrs = find_code(memory, code)
     assert len(addrs) == 1, f'Found multiple teleporter calls ({len(addrs)})'
     return addrs[0]
+
+
+def calculate_location_addr(vm: 'EnhancedCPU'):
+    vm = vm.clone()
+    vm.run()
+    vms = [vm]
+
+    for cmd in ['doorway', 'north', 'north']:
+        vms.append(vms[-1].sendcopy(cmd))
+
+    loc_addr = None
+    for a, b in pairwise(vms):
+        mem = diff_vms(a, b)['memory']
+        addrs = [d[0] for d in mem]
+        loc_addr = addrs[0]  # assume lowest (may be incorrect)
+
+    assert loc_addr
+    return loc_addr
