@@ -125,22 +125,18 @@ def find_and_collect_all(vm, known_locs):
     return vm, descs, known_locs | vms
 
 
-def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-f', '--file', default='challenge.bin')
-    args = parser.parse_args()
-
+def solve_all(arch_spec_fname, challenge_bin_fname):
     print('Loading arch-spec')
-    with open('arch-spec') as f:
+    with open(arch_spec_fname) as f:
         data = f.read()
 
     m1 = re.search("Here's a code for the challenge website: (.*?)\n", data)
     assert m1, 'Missing arch-spec code'
     print(f'\033[92mCode #1: {m1.group(1)}\033[0m: {md5(m1.group(1))}')
 
-    print('Loading binary:', args.file)
+    print('Loading binary:', challenge_bin_fname)
 
-    vm = EnhancedCPU(args.file)
+    vm = EnhancedCPU(challenge_bin_fname)
     vm.run()
     data = vm.read()
 
@@ -242,6 +238,25 @@ def main():
         print('\033[92mCode #8: ' + code + f'\033[0m: {md5(code)}')
     else:
         print('\033[91mError! Last code not found\033[0m')
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        '-b',
+        '--binfile',
+        default='challenge.bin',
+        help='Path to challenge.bin',
+    )
+    parser.add_argument(
+        '-a',
+        '--archfile',
+        default='arch-spec',
+        help='Path to arch-spec',
+    )
+    args = parser.parse_args()
+
+    solve_all(args.archfile, args.binfile)
 
 
 if __name__ == '__main__':
