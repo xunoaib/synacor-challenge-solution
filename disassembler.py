@@ -1,5 +1,6 @@
-#!/usr/bin/env python3
+import argparse
 import string
+import sys
 
 from utils import isreg, read_instruction
 
@@ -59,6 +60,7 @@ def format_instruction_sensible(opcode, args):
 
 
 format_instruction = format_instruction_sensible
+format_instruction = format_instruction_plain
 
 
 def disassemble(memory: list[int], addr=0, lines=15):
@@ -98,11 +100,13 @@ def disassemble(memory: list[int], addr=0, lines=15):
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--file', default='challenge.bin')
+    args = parser.parse_args()
+
     from cpu import CPU
-    vm = CPU('challenge.bin')
-    # vm = CPU.from_snapshot_file('snapshots/start')
-    # vm = CPU('call_6027.bin')
-    disassemble(vm.memory, 0, 10000000)
+    vm = CPU(args.file)
+    disassemble(vm.memory, 0, len(vm.memory))
 
 
 if __name__ == '__main__':
