@@ -102,3 +102,26 @@ def diff_table(section_data, title):
                 vals[i] = f"'[bold green]{chr(v)}[/bold green]' {v}"
         table.add_row(*map(str, vals))
     return table
+
+
+def find_code(memory: list[int], code: list[int | None]):
+    n = len(code)
+    return [
+        i for i in range(len(memory))
+        if all(m == c for m, c in zip(memory[i:i + n], code) if c is not None)
+    ]
+
+
+def find_teleporter_call(memory: list[int]):
+
+    # Code to search for (ignoring special memory addresses)
+    code = [
+        7, 32768, None, 9, 32768, 32769, 1, 18, 7, 32769, None, 9, 32768,
+        32768, 32767, 1, 32769, 32775, 17, None, 18, 2, 32768, 9, 32769, 32769,
+        32767, 17, None, 1, 32769, 32768, 3, 32768, 9, 32768, 32768, 32767, 17,
+        None, 18
+    ]
+
+    addrs = find_code(memory, code)
+    assert len(addrs) == 1, f'Found multiple teleporter calls ({len(addrs)})'
+    return addrs[0]

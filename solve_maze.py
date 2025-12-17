@@ -210,6 +210,7 @@ def main():
     take_all_items()
 
     print('>> Using teleporter again')
+    vm.teleport_call_addr = utils.find_teleporter_call(vm.memory)
     vm.registers[7] = 25734
     vm.send('use teleporter')
 

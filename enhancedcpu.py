@@ -24,6 +24,10 @@ ALIASES = {
 
 class EnhancedCPU(CPU):
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.teleport_call_addr: int | None = None
+
     def debug_cmd(self, cmd):
         try:
             match cmd.split():
@@ -193,7 +197,7 @@ class EnhancedCPU(CPU):
     # @override
     def execute(self, opcode, args):
         # skip call 6027 but set the proper post-exec values
-        if opcode.name == 'call' and args[0] == 6027:
+        if opcode.name == 'call' and args[0] == self.teleport_call_addr:
             self.pc += len(opcode)
             self.registers[0] = 6
             self.registers[1] = 5
