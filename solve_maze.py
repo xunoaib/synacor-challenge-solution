@@ -1,10 +1,6 @@
-#!/usr/bin/env python3
-import json
-import pickle
 import re
 import string
 import sys
-from heapq import heappop, heappush
 
 import utils
 from enhancedcpu import EnhancedCPU
@@ -131,7 +127,6 @@ def bruteforce_location_addrs(vm: EnhancedCPU):
 
 def main():
     # vm = EnhancedCPU('challenge.bin')
-    # vm = EnhancedCPU.from_snapshot_file('snapshots/start')
     vm = EnhancedCPU('challenge-aneurysm.bin')
     vm.run()
 
@@ -139,14 +134,7 @@ def main():
         bruteforce_location_addrs(vm)
         exit()
 
-    # vm.send('.giveall')
-    # vm = EnhancedCPU.from_snapshot_file('snapshots/ladder')
-    # vm = EnhancedCPU.from_snapshot_file('snapshots/beach')
-
-    known_locs = {}
-
-    def print_new_locs():
-        nonlocal known_locs
+    def print_new_locs(known_locs, vms):
         for loc in set(vms) - set(known_locs):
             v = vms[loc]
             v.read()
@@ -154,34 +142,35 @@ def main():
             if m := re.search(r'== (.*?) ==', d):
                 d = m.group(1)
             print(f'New location: {loc} ({d})')
-        known_locs |= vms
 
     def find_all_states():
-        edges, descs, vms = explore(vm, verbose=False)
+        _, descs, vms = explore(vm, verbose=False)
         item_addrs = identify_item_addrs(list(vms.values()))
         print(f'Found {len(vms)} states and {len(item_addrs)} items')
         # print(item_addrs)
         print()
         return descs, vms, item_addrs
 
-    def take_all_items():
+    def take_all_items(item_addrs):
         print()
         for name, addr in item_addrs.items():
             print(f'Giving mem[{addr}] = {name}')
             vm.memory[addr] = 0
         print()
 
-    descs, vms, item_addrs = find_all_states()
-    print_new_locs()
-    take_all_items()
+    def find_and_collect_all(known_locs):
+        descs, vms, item_addrs = find_all_states()
+        print_new_locs(known_locs, vms)
+        take_all_items(item_addrs)
+        return descs, known_locs | vms
+
+    descs, known_locs = find_and_collect_all({})
 
     print('>> Using can and lantern')
     vm.send('use can')
     vm.send('use lantern')
 
-    descs, vms, item_addrs = find_all_states()
-    print_new_locs()
-    take_all_items()
+    descs, known_locs = find_and_collect_all(known_locs)
 
     # Go to central hall
     vm.location = next(
@@ -198,25 +187,19 @@ def main():
     vm.send('use concave coin')
     vm.send('use corroded coin')
 
-    descs, vms, item_addrs = find_all_states()
-    print_new_locs()
-    take_all_items()
+    descs, known_locs = find_and_collect_all(known_locs)
 
     print('>> Using teleporter')
     vm.send('use teleporter')
 
-    descs, vms, item_addrs = find_all_states()
-    print_new_locs()
-    take_all_items()
+    descs, known_locs = find_and_collect_all(known_locs)
 
     print('>> Using teleporter again')
     vm.teleport_call_addr = utils.find_teleporter_call(vm.memory)
     vm.registers[7] = 25734
     vm.send('use teleporter')
 
-    descs, vms, item_addrs = find_all_states()
-    print_new_locs()
-    take_all_items()
+    descs, known_locs = find_and_collect_all(known_locs)
 
     # Go to antechamber
     vm.location = next(
@@ -232,37 +215,7 @@ def main():
     vm.read()
     vm.send('use mirror')
 
-    # print(vm.flush().sendcopy('look strange book').read())
     print(vm.read())
-    # vm.interactive()
-
-    return
-
-    # # discover all rooms (and cache to file)
-    # vm = EnhancedCPU.from_snapshot_file('snapshots/beach')
-    # vm.run()
-    # edges, descs, vms = explore(vm)
-
-    # with open('graph.pickle', 'wb') as f:
-    #     f.write(pickle.dumps(ret))
-
-    # # # load cached results generated above
-    # with open('graph.pickle','rb') as f:
-    #     ret = edges, descs, vms = pickle.loads(f.read())
-
-    # print()
-    # __import__('pprint').pprint(edges)
-
-    for loc, desc in descs.items():
-        # if 'Vault Door' in desc:
-        #     print(loc)
-        #     vms[loc].send('.save vault')
-
-        # if 'journal' in desc:
-        #     print(desc)
-        #     vms[loc].interactive()
-        print()
-        print(desc)
 
 
 if __name__ == '__main__':
