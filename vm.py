@@ -204,7 +204,8 @@ class VM(BaseVM):
             return
 
         if newcmd := ALIASES.get(cmd):
-            print(f'# aliased {cmd} => {newcmd}')
+            if self.is_interactive:
+                print(f'# aliased {cmd} => {newcmd}')
             cmd = newcmd
 
         super().send(cmd)
@@ -214,7 +215,7 @@ class VM(BaseVM):
         self.send(cmd)
         return self.read()
 
-    # @override
+    @override
     def execute(self, opcode, args):
         # skip slow call but set the proper post-exec values
         if opcode.name == 'call' and args[0] == self.teleport_call_addr:

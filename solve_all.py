@@ -18,34 +18,27 @@ def reflect(s: str):
 
 
 def neighbor_locs(vm: VM) -> list[tuple[str, VM]]:
-    exits = find_exits(vm)
-    vms = []
-    for direction in exits:
-        n = vm.sendcopy(direction)
-        vms.append((direction, n))
-    return vms
+    return [(dir, vm.sendcopy(dir)) for dir in find_exits(vm)]
 
 
 def find_exits(vm: VM):
     vm = vm.clone()
     vm.read()
     vm.send('look')
-    data = vm.read()
-
-    if m := re.search(
-        r'\nThere (is|are) (\d+) exits?:\n(.*)\nWhat do you do?', data,
+    m = re.search(
+        r'\nThere (is|are) (\d+) exits?:\n(.*)\nWhat do you do?', vm.read(),
         re.DOTALL
-    ):
-        return re.findall(r'- (.*?)\n', m.group(3))
-    return []
+    )
+    return re.findall(r'- (.*?)\n', m.group(3)) if m else []
 
 
 def find_items(vm: VM):
     vm = vm.clone()
     vm.read()
     vm.send('look')
-    data = vm.read()
-    m = re.search(r'\nThings of interest here:\n(.*?)\n\n', data, re.DOTALL)
+    m = re.search(
+        r'\nThings of interest here:\n(.*?)\n\n', vm.read(), re.DOTALL
+    )
     return re.findall(r'- (.*?)\n', m.group(1) + '\n') if m else []
 
 
@@ -64,16 +57,13 @@ def identify_item_addrs(vms: list[VM]):
 
 
 def explore(vm: VM):
-    '''Explore all possible paths from the given CPU state. Cycles are skipped'''
-
     vm.read()
-    vm.send('look')  # NOTE: won't show previous output
+    vm.send('look')
 
     vms: dict[int, VM] = {}
     # map current vm location => [(north_room_id, 'north'), ...]
     edges: dict[int, list[tuple[int, str]]] = {}
     descriptions = {vm.location: vm.read().strip()}
-
     q = [vm]
 
     while q:
@@ -89,7 +79,7 @@ def explore(vm: VM):
     return edges, descriptions, vms
 
 
-def print_new_locs(known_locs, vms):
+def print_new_locs(known_locs: dict[int, VM], vms: dict[int, VM]):
     for loc in set(vms) - set(known_locs):
         v = vms[loc]
         v.read()
@@ -99,14 +89,14 @@ def print_new_locs(known_locs, vms):
         print(f'New location: {loc} ({d})')
 
 
-def find_all_states(vm):
+def find_all_states(vm: VM):
     _, descs, vms = explore(vm)
     item_addrs = identify_item_addrs(list(vms.values()))
     print(f'Found {len(vms)} states and {len(item_addrs)} items\n')
     return descs, vms, item_addrs
 
 
-def take_all_items(vm, item_addrs):
+def take_all_items(vm: VM, item_addrs: dict[str, int]):
     vm = vm.clone()
     print()
     for name, addr in item_addrs.items():
@@ -116,59 +106,64 @@ def take_all_items(vm, item_addrs):
     return vm
 
 
-def find_and_collect_all(vm, known_locs):
+def find_and_collect_all(vm: VM, known_locs: dict[int, VM]):
     descs, vms, item_addrs = find_all_states(vm)
     print_new_locs(known_locs, vms)
     vm = take_all_items(vm, item_addrs)
     return vm, descs, known_locs | vms
 
 
+def print_code(num: int, code: str):
+    print(f'\033[92mCode #{num}: {code}\033[0m: {md5(code)}')
+
+
 def solve_all(arch_spec_fname, challenge_bin_fname):
-    print('Loading arch-spec')
+    print(f'\033[93mLoading arch-spec: {arch_spec_fname}\033[0m')
     with open(arch_spec_fname) as f:
         data = f.read()
 
     m1 = re.search("Here's a code for the challenge website: (.*?)\n", data)
     assert m1, 'Missing arch-spec code'
-    print(f'\033[92mCode #1: {m1.group(1)}\033[0m: {md5(m1.group(1))}')
+    print_code(1, m1.group(1))
 
-    print('Loading binary:', challenge_bin_fname)
+    print(f'\033[93mLoading binary: {challenge_bin_fname}\033[0m')
 
     vm = VM(challenge_bin_fname)
     vm.run()
     data = vm.read()
 
     m2 = re.search('this one into the challenge website: (.*?)\n', data)
-    m3 = re.search('The self-test completion code is: (.*?)\n', data)
-
     assert m2, 'Missing pre-test code'
+    print_code(2, m2.group(1))
+
+    m3 = re.search('The self-test completion code is: (.*?)\n', data)
     assert m3, 'Missing post-test code'
-
-    print(f'\033[92mCode #2: {m2.group(1)}\033[0m: {md5(m2.group(1))}')
-    print(f'\033[92mCode #3: {m3.group(1)}\033[0m: {md5(m3.group(1))}')
-
-    vm.send('take tablet')
-    vm.read()
-    vm.send('use tablet')
-    data = vm.read()
-
-    m = re.search(r'You find yourself writing "(.*?)" on the tablet', data)
-    assert m, 'Missing code (tablet)'
-    print(f'\033[92mCode #4: {m.group(1)}\033[0m: {md5(m.group(1))}')
+    print_code(3, m3.group(1))
 
     vm, descs, known_locs = find_and_collect_all(vm, {})
 
-    print('>> Using can and lantern')
     vm.send('use can')
     vm.send('use lantern')
+    vm.send('use tablet')
 
+    print('\033[93m>> Using tablet\033[0m')
+    m = re.search(
+        r'You find yourself writing "(.*?)" on the tablet', vm.read()
+    )
+    assert m, 'Missing tablet code'
+    print_code(4, m.group(1))
+
+    print('\033[93m>> Solving twisty maze\033[0m')
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
     code5 = next(
-        m.group(1) for d in descs.values()
-        if (m := re.search('Chiseled on the wall.*\n\n    (.*?)\n', d))
+        (
+            m.group(1) for d in descs.values()
+            if (m := re.search('Chiseled on the wall.*\n\n    (.*?)\n', d))
+        ), None
     )
-    print(f'\033[92mCode #5: {code5}\033[0m: {md5(code5)}')
+    assert code5, 'Missing maze code'
+    print_code(5, code5)
 
     # Go to central hall
     vm.location = next(
@@ -177,8 +172,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
         in desc
     )
 
-    # Solve coins puzzle
-    print('>> Solving coins puzzle')
+    print('\033[93m>> Solving coins puzzle\033[0m')
     vm.send('use blue coin')
     vm.send('use red coin')
     vm.send('use shiny coin')
@@ -187,39 +181,35 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
 
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
-    print('>> Using teleporter')
+    print('\033[93m>> Using teleporter\033[0m')
     vm.send('use teleporter')
-
-    data = vm.read()
     m = re.search(
-        r'you think you see a pattern in the stars...\n\s+(.*?)\n', data
+        r'you think you see a pattern in the stars...\n\s+(.*?)\n', vm.read()
     )
     assert m, 'Missing first teleport code'
-    print(f'\033[92mCode #6: {m.group(1)}\033[0m: {md5(m.group(1))}')
+    print_code(6, m.group(1))
 
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
-    print('>> Using teleporter again')
+    print('\033[93m>> Using teleporter again\033[0m')
     vm.patch_teleporter_call()
     vm.registers[7] = 25734
     vm.send('use teleporter')
 
-    data = vm.read()
     m = re.search(
         r'Someone seems to have drawn a message in the sand here:\n\s+(.*?)\n',
-        data
+        vm.read()
     )
     assert m, 'Missing second teleport code'
-    print(f'\033[92mCode #7: {m.group(1)}\033[0m: {md5(m.group(1))}')
+    print_code(7, m.group(1))
 
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
-    # Go to antechamber
+    print('\033[93m>> Solving antechamber\033[0m')
     vm.location = next(
         loc for loc, desc in descs.items() if '== Vault Antechamber ==' in desc
     )
 
-    # Solver antechamber
     vm.send('look')
     vm.send('take orb')
     vm.send('n;e;e;n;w;s;e;e;w;n;n;e')
@@ -228,14 +218,11 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     vm.read()
     vm.send('use mirror')
 
-    resp = vm.read()
-    if m := re.search(
-        'Through the mirror, you see "(.*)" scrawled in charcoal', resp
-    ):
-        code = reflect(m.group(1))
-        print('\033[92mCode #8: ' + code + f'\033[0m: {md5(code)}')
-    else:
-        print('\033[91mError! Last code not found\033[0m')
+    m = re.search(
+        'Through the mirror, you see "(.*)" scrawled in charcoal', vm.read()
+    )
+    assert m, 'Missing mirror code'
+    print_code(8, reflect(m.group(1)))
 
 
 def main():
