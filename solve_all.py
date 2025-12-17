@@ -116,10 +116,29 @@ def main():
     parser.add_argument('-f', '--file', default='challenge.bin')
     args = parser.parse_args()
 
+    print('Loading arch-spec')
+    with open('arch-spec') as f:
+        data = f.read()
+
+    m1 = re.search("Here's a code for the challenge website: (.*?)\n", data)
+    assert m1, 'Missing code 1'
+    print(f'Code #1: {m1.group(1)}')
+
     print('Loading binary:', args.file)
 
     vm = EnhancedCPU(args.file)
     vm.run()
+
+    data = vm.read()
+
+    m2 = re.search('this one into the challenge website: (.*?)\n', data)
+    m3 = re.search('The self-test completion code is: (.*?)\n', data)
+
+    assert m2, 'Missing code 2'
+    assert m3, 'Missing code 3'
+
+    print(f'Code #2: {m2.group(1)}')
+    print(f'Code #3: {m3.group(1)}')
 
     vm, descs, known_locs = find_and_collect_all(vm, {})
 
