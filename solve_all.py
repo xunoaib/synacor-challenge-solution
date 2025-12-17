@@ -1,12 +1,21 @@
 import argparse
+import hashlib
 import re
 
 import utils
 from enhancedcpu import EnhancedCPU
 
 
+def md5(s: str):
+    return hashlib.md5(s.encode()).hexdigest()
+
+
 def reflect(s: str):
-    d = {'d': 'b', 'b': 'd', 'p': 'q', 'q': 'p'}
+
+    def add(a, b):
+        return {a: b, b: a}
+
+    d = add('d', 'b') | add('p', 'q') | add('2', '5')
     return ''.join(d.get(c, c) for c in s)[::-1]
 
 
@@ -126,8 +135,8 @@ def main():
         data = f.read()
 
     m1 = re.search("Here's a code for the challenge website: (.*?)\n", data)
-    assert m1, 'Missing code 1'
-    print(f'\033[92mCode #1: {m1.group(1)}\033[0m')
+    assert m1, 'Missing arch-spec code'
+    print(f'\033[92mCode #1: {m1.group(1)}\033[0m: {md5(m1.group(1))}')
 
     print('Loading binary:', args.file)
 
@@ -138,11 +147,11 @@ def main():
     m2 = re.search('this one into the challenge website: (.*?)\n', data)
     m3 = re.search('The self-test completion code is: (.*?)\n', data)
 
-    assert m2, 'Missing code 2'
-    assert m3, 'Missing code 3'
+    assert m2, 'Missing pre-test code'
+    assert m3, 'Missing post-test code'
 
-    print(f'\033[92mCode #2: {m2.group(1)}\033[0m')
-    print(f'\033[92mCode #3: {m3.group(1)}\033[0m')
+    print(f'\033[92mCode #2: {m2.group(1)}\033[0m: {md5(m2.group(1))}')
+    print(f'\033[92mCode #3: {m3.group(1)}\033[0m: {md5(m3.group(1))}')
 
     vm.send('take tablet')
     vm.read()
@@ -151,7 +160,7 @@ def main():
 
     m = re.search(r'You find yourself writing "(.*?)" on the tablet', data)
     assert m, 'Missing code (tablet)'
-    print(f'\033[92mCode #4: {m.group(1)}\033[0m')
+    print(f'\033[92mCode #4: {m.group(1)}\033[0m: {md5(m.group(1))}')
 
     vm, descs, known_locs = find_and_collect_all(vm, {})
 
@@ -161,11 +170,11 @@ def main():
 
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
-    code4 = next(
+    code5 = next(
         m.group(1) for d in descs.values()
         if (m := re.search('Chiseled on the wall.*\n\n    (.*?)\n', d))
     )
-    print(f'\033[92mCode #5: {code4}\033[0m')
+    print(f'\033[92mCode #5: {code5}\033[0m: {md5(code5)}')
 
     # Go to central hall
     vm.location = next(
@@ -192,7 +201,7 @@ def main():
         r'you think you see a pattern in the stars...\n\s+(.*?)\n', data
     )
     assert m, 'Missing first teleport code'
-    print(f'\033[92mCode #6: {m.group(1)}\033[0m')
+    print(f'\033[92mCode #6: {m.group(1)}\033[0m: {md5(m.group(1))}')
 
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
@@ -207,7 +216,7 @@ def main():
         data
     )
     assert m, 'Missing second teleport code'
-    print(f'\033[92mCode #7: {m.group(1)}\033[0m')
+    print(f'\033[92mCode #7: {m.group(1)}\033[0m: {md5(m.group(1))}')
 
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
@@ -229,7 +238,8 @@ def main():
     if m := re.search(
         'Through the mirror, you see "(.*)" scrawled in charcoal', resp
     ):
-        print('\033[92mCode #8: ' + reflect(m.group(1)) + '\033[0m')
+        code = reflect(m.group(1))
+        print('\033[92mCode #8: ' + code + f'\033[0m: {md5(code)}')
     else:
         print('\033[91mError! Last code not found\033[0m')
 
