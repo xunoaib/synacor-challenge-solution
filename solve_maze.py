@@ -1,3 +1,4 @@
+import argparse
 import re
 import string
 import sys
@@ -16,8 +17,9 @@ def neighbor_locs(vm: EnhancedCPU) -> list[tuple[str, EnhancedCPU]]:
 
 
 def find_items(vm: EnhancedCPU):
+    vm = vm.clone()
     vm.read()
-    vm = vm.sendcopy('look')
+    vm.send('look')
     data = vm.read()
 
     if m := re.search(
@@ -29,8 +31,9 @@ def find_items(vm: EnhancedCPU):
 
 
 def find_exits(vm: EnhancedCPU):
+    vm = vm.clone()
     vm.read()
-    vm = vm.sendcopy('look')
+    vm.send('look')
     data = vm.read()
 
     if m := re.search(
@@ -56,11 +59,11 @@ def identify_item_addrs(vms: list[EnhancedCPU]):
     return addrs
 
 
-def explore(current: EnhancedCPU, verbose=True):
+def explore(current: EnhancedCPU):
     '''Explore all possible paths from the given CPU state. Cycles are skipped'''
 
     current.read()
-    current.send('look')
+    current.send('look')  # NOTE: won't show previous output
 
     vms: dict[int, EnhancedCPU] = {}
     # map current vm location => [(north_room_id, 'north'), ...]
@@ -71,19 +74,10 @@ def explore(current: EnhancedCPU, verbose=True):
 
     while q:
         current = q.pop(0)
-        if verbose:
-            print(
-                f'\033[92m{current.location}',
-                descriptions[current.location].split('\n')[0], '\033[0m'
-            )
-            print(descriptions[current.location])
-
         states = list(neighbor_locs(current))
         edges[current.location] = [(n.location, move) for move, n in states]
         for _, n in states:
             if n.location not in vms:
-                n.read()
-                n.send('look')
                 descriptions[n.location] = n.read().strip()
                 vms[n.location] = n
                 q.append(n)
@@ -126,8 +120,13 @@ def bruteforce_location_addrs(vm: EnhancedCPU):
 
 
 def main():
-    # vm = EnhancedCPU('challenge.bin')
-    vm = EnhancedCPU('challenge-aneurysm.bin')
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-f', '--file', default='challenge.bin')
+    args = parser.parse_args()
+
+    print('Loading binary:', args.file)
+
+    vm = EnhancedCPU(args.file)
     vm.run()
 
     if '-b' in sys.argv:
@@ -143,34 +142,40 @@ def main():
                 d = m.group(1)
             print(f'New location: {loc} ({d})')
 
-    def find_all_states():
-        _, descs, vms = explore(vm, verbose=False)
+    def find_all_states(vm):
+        _, descs, vms = explore(vm)
         item_addrs = identify_item_addrs(list(vms.values()))
-        print(f'Found {len(vms)} states and {len(item_addrs)} items')
-        # print(item_addrs)
-        print()
+        print(f'Found {len(vms)} states and {len(item_addrs)} items\n')
         return descs, vms, item_addrs
 
-    def take_all_items(item_addrs):
+    def take_all_items(vm, item_addrs):
+        vm = vm.clone()
         print()
         for name, addr in item_addrs.items():
             print(f'Giving mem[{addr}] = {name}')
             vm.memory[addr] = 0
         print()
+        return vm
 
-    def find_and_collect_all(known_locs):
-        descs, vms, item_addrs = find_all_states()
+    def find_and_collect_all(vm, known_locs):
+        descs, vms, item_addrs = find_all_states(vm)
         print_new_locs(known_locs, vms)
-        take_all_items(item_addrs)
-        return descs, known_locs | vms
+        vm = take_all_items(vm, item_addrs)
+        return vm, descs, known_locs | vms
 
-    descs, known_locs = find_and_collect_all({})
+    vm, descs, known_locs = find_and_collect_all(vm, {})
 
     print('>> Using can and lantern')
     vm.send('use can')
     vm.send('use lantern')
 
-    descs, known_locs = find_and_collect_all(known_locs)
+    vm, descs, known_locs = find_and_collect_all(vm, known_locs)
+
+    code4 = next(
+        m.group(1) for d in descs.values()
+        if (m := re.search('Chiseled on the wall.*\n\n    (.*?)\n', d))
+    )
+    print(f'\033[92mCode #4: {code4}\033[0m')
 
     # Go to central hall
     vm.location = next(
@@ -187,19 +192,19 @@ def main():
     vm.send('use concave coin')
     vm.send('use corroded coin')
 
-    descs, known_locs = find_and_collect_all(known_locs)
+    vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
     print('>> Using teleporter')
     vm.send('use teleporter')
 
-    descs, known_locs = find_and_collect_all(known_locs)
+    vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
     print('>> Using teleporter again')
     vm.teleport_call_addr = utils.find_teleporter_call(vm.memory)
     vm.registers[7] = 25734
     vm.send('use teleporter')
 
-    descs, known_locs = find_and_collect_all(known_locs)
+    vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
     # Go to antechamber
     vm.location = next(
@@ -215,7 +220,13 @@ def main():
     vm.read()
     vm.send('use mirror')
 
-    print(vm.read())
+    resp = vm.read()
+    if m := re.search(
+        'Through the mirror, you see "(.*)" scrawled in charcoal', resp
+    ):
+        print('\033[92mCode #8: ' + m.group(1) + '\033[0m')
+    else:
+        print('\033[91mError! Last code not found\033[0m')
 
 
 if __name__ == '__main__':
