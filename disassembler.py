@@ -103,8 +103,8 @@ def main():
     parser.add_argument('-f', '--file', default='challenge.bin')
     args = parser.parse_args()
 
-    from cpu import CPU
-    vm = CPU(args.file)
+    from cpu import BaseVM
+    vm = BaseVM(args.file)
     disassemble(vm.memory, 0, len(vm.memory))
 
 

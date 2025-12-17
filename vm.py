@@ -7,7 +7,7 @@ from typing import override
 from colorama import Fore, Style
 
 import utils
-from cpu import CPU
+from basevm import BaseVM
 
 ALIASES = {
     'l': 'look',
@@ -27,7 +27,7 @@ class DummyError(Exception):
     pass
 
 
-class EnhancedCPU(CPU):
+class VM(BaseVM):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 from itertools import combinations, pairwise, permutations
 
+from vm import VM
 from z3 import Int, Or, Solver
 
 import utils
-from enhancedcpu import EnhancedCPU
 
 COIN_NAMES = {
     2: 'red coin',

@@ -1,12 +1,13 @@
 from itertools import pairwise
 
+from vm import VM
+
 import utils
-from enhancedcpu import EnhancedCPU
 
 fname = 'challenge-aneurysm.bin'
 
 
-def identify_location_addr(vm: EnhancedCPU):
+def identify_location_addr(vm: VM):
     vm.run()
     vms = [vm]
 
@@ -25,7 +26,7 @@ def identify_location_addr(vm: EnhancedCPU):
 
 def main():
 
-    vm = EnhancedCPU(fname)
+    vm = VM(fname)
     addr = identify_location_addr(vm)
     print(addr)
 

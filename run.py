@@ -3,11 +3,11 @@ import argparse
 import string
 import sys
 
-from enhancedcpu import EnhancedCPU
+from vm import VM
 
 
 def dump_text_section():
-    vm = EnhancedCPU.from_snapshot_file('snapshots/start')
+    vm = VM.from_snapshot_file('snapshots/start')
 
     s = ''
     start_idx = 6072
@@ -20,7 +20,7 @@ def dump_text_section():
 
 
 def dump_text_section_addrs():
-    vm = EnhancedCPU.from_snapshot_file('snapshots/start')
+    vm = VM.from_snapshot_file('snapshots/start')
 
     addr = 6072
     buffer = ''
@@ -46,7 +46,7 @@ def main():
 
     print('Loading binary:', args.file)
 
-    vm = EnhancedCPU(args.file)
+    vm = VM(args.file)
     # vm = EnhancedCPU.from_snapshot_file('snapshots/start')
 
     print(vm.read())

@@ -2,8 +2,9 @@ import argparse
 import hashlib
 import re
 
+from vm import VM
+
 import utils
-from enhancedcpu import EnhancedCPU
 
 
 def md5(s: str):
@@ -19,7 +20,7 @@ def reflect(s: str):
     return ''.join(d.get(c, c) for c in s)[::-1]
 
 
-def neighbor_locs(vm: EnhancedCPU) -> list[tuple[str, EnhancedCPU]]:
+def neighbor_locs(vm: VM) -> list[tuple[str, VM]]:
     exits = find_exits(vm)
     vms = []
     for direction in exits:
@@ -28,7 +29,7 @@ def neighbor_locs(vm: EnhancedCPU) -> list[tuple[str, EnhancedCPU]]:
     return vms
 
 
-def find_exits(vm: EnhancedCPU):
+def find_exits(vm: VM):
     vm = vm.clone()
     vm.read()
     vm.send('look')
@@ -42,7 +43,7 @@ def find_exits(vm: EnhancedCPU):
     return []
 
 
-def find_items(vm: EnhancedCPU):
+def find_items(vm: VM):
     vm = vm.clone()
     vm.read()
     vm.send('look')
@@ -51,7 +52,7 @@ def find_items(vm: EnhancedCPU):
     return re.findall(r'- (.*?)\n', m.group(1) + '\n') if m else []
 
 
-def identify_item_addrs(vms: list[EnhancedCPU]):
+def identify_item_addrs(vms: list[VM]):
     addrs = {}
     for vm in vms:
         for item in find_items(vm):
@@ -65,13 +66,13 @@ def identify_item_addrs(vms: list[EnhancedCPU]):
     return addrs
 
 
-def explore(vm: EnhancedCPU):
+def explore(vm: VM):
     '''Explore all possible paths from the given CPU state. Cycles are skipped'''
 
     vm.read()
     vm.send('look')  # NOTE: won't show previous output
 
-    vms: dict[int, EnhancedCPU] = {}
+    vms: dict[int, VM] = {}
     # map current vm location => [(north_room_id, 'north'), ...]
     edges: dict[int, list[tuple[int, str]]] = {}
     descriptions = {vm.location: vm.read().strip()}
@@ -136,7 +137,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
 
     print('Loading binary:', challenge_bin_fname)
 
-    vm = EnhancedCPU(challenge_bin_fname)
+    vm = VM(challenge_bin_fname)
     vm.run()
     data = vm.read()
 

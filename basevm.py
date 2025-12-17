@@ -1,11 +1,12 @@
 import ast
 import copy
+from typing import override
 
 from utils import (calculate_location_addr, isreg, load_bytecode,
                    read_instruction, to_register)
 
 
-class CPU:
+class BaseVM:
 
     def __init__(self, fname=None):
         self.memory = []
@@ -240,6 +241,7 @@ class CPU:
         ]:
             setattr(self, attrib, copy.deepcopy(snapshot[attrib]))
 
+    @override
     def __repr__(self):
         return f'<{self.__class__.__name__}(pc={self.pc}, loc={self.location})>'
 
@@ -258,7 +260,3 @@ class CPU:
         vm = cls()
         vm.load_snapshot(snapshot)
         return vm
-
-
-# for r in range(8):
-#     setattr(CPU, f'r{r}', lambda self: self.registers[r])
