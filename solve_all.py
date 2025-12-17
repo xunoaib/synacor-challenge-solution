@@ -1,10 +1,10 @@
 import argparse
 import hashlib
 import re
-
-from vm import VM
+from pathlib import Path
 
 import utils
+from vm import VM
 
 
 def md5(s: str):
@@ -255,9 +255,18 @@ def main():
         default='arch-spec',
         help='Path to arch-spec',
     )
+    parser.add_argument(
+        '-d',
+        '--dir',
+        default='.',
+        help='Path to directory containing challenge files',
+    )
     args = parser.parse_args()
 
-    solve_all(args.archfile, args.binfile)
+    archfile = Path(args.dir) / args.archfile
+    binfile = Path(args.dir) / args.binfile
+
+    solve_all(archfile, binfile)
 
 
 if __name__ == '__main__':
