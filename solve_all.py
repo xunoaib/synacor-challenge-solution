@@ -12,11 +12,8 @@ def md5(s: str):
 
 
 def reflect(s: str):
-
-    def add(a, b):
-        return {a: b, b: a}
-
-    d = add('d', 'b') | add('p', 'q') | add('2', '5')
+    d = {'d': 'b', 'p': 'q'}
+    d |= {v: k for k, v in d.items()}
     return ''.join(d.get(c, c) for c in s)[::-1]
 
 
