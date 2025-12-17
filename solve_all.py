@@ -122,13 +122,12 @@ def main():
 
     m1 = re.search("Here's a code for the challenge website: (.*?)\n", data)
     assert m1, 'Missing code 1'
-    print(f'Code #1: {m1.group(1)}')
+    print(f'\033[92mCode #1: {m1.group(1)}\033[0m')
 
     print('Loading binary:', args.file)
 
     vm = EnhancedCPU(args.file)
     vm.run()
-
     data = vm.read()
 
     m2 = re.search('this one into the challenge website: (.*?)\n', data)
@@ -137,8 +136,17 @@ def main():
     assert m2, 'Missing code 2'
     assert m3, 'Missing code 3'
 
-    print(f'Code #2: {m2.group(1)}')
-    print(f'Code #3: {m3.group(1)}')
+    print(f'\033[92mCode #2: {m2.group(1)}\033[0m')
+    print(f'\033[92mCode #3: {m3.group(1)}\033[0m')
+
+    vm.send('take tablet')
+    vm.read()
+    vm.send('use tablet')
+    data = vm.read()
+
+    m = re.search(r'You find yourself writing "(.*?)" on the tablet', data)
+    assert m, 'Missing code (tablet)'
+    print(f'\033[92mCode #4: {m.group(1)}\033[0m')
 
     vm, descs, known_locs = find_and_collect_all(vm, {})
 
@@ -152,7 +160,7 @@ def main():
         m.group(1) for d in descs.values()
         if (m := re.search('Chiseled on the wall.*\n\n    (.*?)\n', d))
     )
-    print(f'\033[92mCode #4: {code4}\033[0m')
+    print(f'\033[92mCode #5: {code4}\033[0m')
 
     # Go to central hall
     vm.location = next(
@@ -174,12 +182,27 @@ def main():
     print('>> Using teleporter')
     vm.send('use teleporter')
 
+    data = vm.read()
+    m = re.search(
+        r'you think you see a pattern in the stars...\n\s+(.*?)\n', data
+    )
+    assert m, 'Missing code (first teleport)'
+    print(f'\033[92mCode #6: {m.group(1)}\033[0m')
+
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
     print('>> Using teleporter again')
     vm.patch_teleporter_call()
     vm.registers[7] = 25734
     vm.send('use teleporter')
+
+    data = vm.read()
+    m = re.search(
+        r'Someone seems to have drawn a message in the sand here:\n\s+(.*?)\n',
+        data
+    )
+    assert m, 'Missing code 5 (second teleport)'
+    print(f'\033[92mCode #7: {m.group(1)}\033[0m')
 
     vm, descs, known_locs = find_and_collect_all(vm, known_locs)
 
