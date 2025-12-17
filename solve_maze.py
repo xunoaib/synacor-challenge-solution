@@ -77,6 +77,40 @@ def explore(vm: EnhancedCPU):
     return edges, descriptions, vms
 
 
+def print_new_locs(known_locs, vms):
+    for loc in set(vms) - set(known_locs):
+        v = vms[loc]
+        v.read()
+        d = v.sendcopy('look').read()
+        if m := re.search(r'== (.*?) ==', d):
+            d = m.group(1)
+        print(f'New location: {loc} ({d})')
+
+
+def find_all_states(vm):
+    _, descs, vms = explore(vm)
+    item_addrs = identify_item_addrs(list(vms.values()))
+    print(f'Found {len(vms)} states and {len(item_addrs)} items\n')
+    return descs, vms, item_addrs
+
+
+def take_all_items(vm, item_addrs):
+    vm = vm.clone()
+    print()
+    for name, addr in item_addrs.items():
+        print(f'Giving mem[{addr}] = {name}')
+        vm.memory[addr] = 0
+    print()
+    return vm
+
+
+def find_and_collect_all(vm, known_locs):
+    descs, vms, item_addrs = find_all_states(vm)
+    print_new_locs(known_locs, vms)
+    vm = take_all_items(vm, item_addrs)
+    return vm, descs, known_locs | vms
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-f', '--file', default='challenge.bin')
@@ -86,36 +120,6 @@ def main():
 
     vm = EnhancedCPU(args.file)
     vm.run()
-
-    def print_new_locs(known_locs, vms):
-        for loc in set(vms) - set(known_locs):
-            v = vms[loc]
-            v.read()
-            d = v.sendcopy('look').read()
-            if m := re.search(r'== (.*?) ==', d):
-                d = m.group(1)
-            print(f'New location: {loc} ({d})')
-
-    def find_all_states(vm):
-        _, descs, vms = explore(vm)
-        item_addrs = identify_item_addrs(list(vms.values()))
-        print(f'Found {len(vms)} states and {len(item_addrs)} items\n')
-        return descs, vms, item_addrs
-
-    def take_all_items(vm, item_addrs):
-        vm = vm.clone()
-        print()
-        for name, addr in item_addrs.items():
-            print(f'Giving mem[{addr}] = {name}')
-            vm.memory[addr] = 0
-        print()
-        return vm
-
-    def find_and_collect_all(vm, known_locs):
-        descs, vms, item_addrs = find_all_states(vm)
-        print_new_locs(known_locs, vms)
-        vm = take_all_items(vm, item_addrs)
-        return vm, descs, known_locs | vms
 
     vm, descs, known_locs = find_and_collect_all(vm, {})
 
