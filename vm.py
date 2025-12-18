@@ -174,9 +174,9 @@ class VM(BaseVM):
 
     @override
     def interactive(self):
-        self.is_interactive = False
-        super().interactive()
         self.is_interactive = True
+        super().interactive()
+        self.is_interactive = False
 
     @override
     def input(self):
