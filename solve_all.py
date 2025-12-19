@@ -120,7 +120,7 @@ def print_code(num: int, code: str):
     print(f'\033[92mCode #{num}: {code}\033[0m: {md5(code)}')
 
 
-def solve_all(arch_spec_fname, challenge_bin_fname):
+def solve_all(arch_spec_fname, challenge_bin_fname, args_plot: bool):
     print(f'\033[93mLoading arch-spec: {arch_spec_fname}\033[0m')
     with open(arch_spec_fname) as f:
         data = f.read()
@@ -144,7 +144,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     print_code(3, m3.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, {})
-    plot_edges(edges, descs)
+    args_plot and plot_edges(edges, descs, 'map0.png')
 
     vm.send('use can')
     vm.send('use lantern')
@@ -160,7 +160,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     print('\033[93m>> Solving twisty maze\033[0m')
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    plot_edges(edges, descs)
+    args_plot and plot_edges(edges, descs, 'map1.png')
 
     code5 = next(
         (
@@ -186,7 +186,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     vm.send('use corroded coin')
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    plot_edges(edges, descs)
+    args_plot and plot_edges(edges, descs, 'map2.png')
 
     print('\033[93m>> Using teleporter\033[0m')
     vm.send('use teleporter')
@@ -197,7 +197,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     print_code(6, m.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    plot_edges(edges, descs)
+    args_plot and plot_edges(edges, descs, 'map3.png')
 
     print('\033[93m>> Using teleporter again\033[0m')
     vm.patch_teleporter_call()
@@ -212,9 +212,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     print_code(7, m.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    plot_edges(edges, descs)
-
-    vm.interactive()
+    args_plot and plot_edges(edges, descs, 'map4.png')
 
     print('\033[93m>> Solving antechamber\033[0m')
     vm.location = next(
@@ -235,12 +233,17 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     assert m, 'Missing mirror code'
     print_code(8, reflect(m.group(1)))
 
+    edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
+    args_plot and plot_edges(edges, descs, 'map5.png')
 
-def plot_edges(edges, descs):
+
+def plot_edges(edges, descs, fname=None, show=False):
     names = {}
     for loc, desc in descs.items():
         m = re.search(r'== (.*?) ==', desc)
         names[loc] = m.group(1) if m else str(loc)
+
+    plt.figure(figsize=(8, 6))
 
     G = nx.DiGraph()
 
@@ -273,7 +276,12 @@ def plot_edges(edges, descs):
     plt.title('Location Graph')
     plt.axis('off')
     plt.tight_layout()
-    plt.show()
+
+    if show:
+        plt.show()
+
+    if fname:
+        plt.savefig(fname, dpi=300)
 
 
 def main():
@@ -296,12 +304,13 @@ def main():
         default='.',
         help='Path to directory containing challenge files',
     )
+    parser.add_argument('-p', '--plot', action='store_true')
     args = parser.parse_args()
 
     archfile = Path(args.dir) / args.archfile
     binfile = Path(args.dir) / args.binfile
 
-    solve_all(archfile, binfile)
+    solve_all(archfile, binfile, args.plot)
 
 
 if __name__ == '__main__':
