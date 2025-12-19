@@ -25,11 +25,13 @@ def plot_edges(edges, descs, fname=None, show=False):
 
     pos = nx.spring_layout(G, seed=42, iterations=500, k=1.5)
 
+    node_colors = [G.nodes[n]['color'] for n in G.nodes]
+
     nx.draw(
         G,
         pos,
         node_size=400,
-        node_color='lightblue',
+        node_color=node_colors,
         edge_color='gray',
         arrows=True,
         with_labels=False,
@@ -52,7 +54,52 @@ def plot_edges(edges, descs, fname=None, show=False):
         plt.savefig(fname, dpi=300)
 
 
-def plot_edges_interactive(edges, descs, fname="graph.html"):
+def node_style_from_name(name: str):
+
+    if 'Dark' in name:
+        return {
+            'color': '#04387b',
+            'group': 'dark_passage',
+        }
+    elif 'Moss cavern' in name:
+        return {
+            'color': '#116622',
+            'group': 'dark_passage',
+        }
+    elif 'Tropical' in name:
+        return {
+            'color': '#11bb22',
+            'group': 'vault',
+        }
+    elif 'Beach' in name:
+        return {
+            'color': '#ffd700',
+            'group': 'vault',
+        }
+    elif 'Vault' in name:
+        return {
+            'color': '#800080',
+            'group': 'vault',
+        }
+    elif 'Twisty' in name:
+        return {
+            'color': '#e74c3c',
+            'group': 'twisty',
+        }
+    elif 'Ruins' in name:
+        return {
+            'color': '#FF8C00',
+            'group': 'ruins',
+        }
+    else:
+        return {
+            'color': '#3498db',
+            'group': 'normal',
+        }
+
+
+def plot_edges_interactive(edges, descs, fname='graph.html'):
+
     names = {}
     for loc, desc in descs.items():
         m = re.search(r'== (.*?) ==', desc)
@@ -61,9 +108,12 @@ def plot_edges_interactive(edges, descs, fname="graph.html"):
     G = nx.DiGraph()
 
     for loc in edges:
+        name = names.get(loc, str(loc))
+        style = node_style_from_name(name)
         G.add_node(
             loc,
-            label=names.get(loc, str(loc)),
+            label=name,
+            color=style['color'],
             title=f"<b>Location:</b> {loc}<br><pre>{descs.get(loc, '')}</pre>",
         )
 
