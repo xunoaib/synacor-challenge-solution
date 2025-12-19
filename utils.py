@@ -42,7 +42,7 @@ def read_instruction(memory, addr):
     return opcode, args
 
 
-def parse_opcodes(arch_spec_fname='arch-spec'):
+def parse_opcodes(arch_spec_fname='arch-spec') -> dict[int, Opcode]:
     with open(arch_spec_fname) as f:
         data = f.read()
 

@@ -1,7 +1,9 @@
 import argparse
 import string
+from dataclasses import dataclass
+from typing import override
 
-from utils import is_reg, read_instruction
+from utils import Opcode, is_reg, read_instruction
 
 
 def format_instruction_plain(opcode, args):
@@ -59,14 +61,61 @@ def format_instruction_sensible(opcode, args):
 
 
 format_instruction = format_instruction_sensible
-format_instruction = format_instruction_plain
+# format_instruction = format_instruction_plain
+
+
+@dataclass
+class Instruction:
+    address: int
+    opcode: Opcode
+    args: tuple[int, ...]
+
+
+@dataclass
+class Instructions:
+    instructions: list[Instruction]
+
+    @override
+    def __repr__(self) -> str:
+        inst = self.instructions[0]
+        if inst.opcode.name == 'out':
+            assert all(i.opcode.name == 'out' for i in self.instructions)
+            args = (''.join(chr(i.args[0]) for i in self.instructions), )
+        else:
+            args = inst.args
+
+        return f'{inst.address:>5}  {format_instruction(inst.opcode, args)}'
+
+
+@dataclass
+class RawValue:
+    address: int
+    values: list[int]
+
+    def is_ascii(self):
+        return all(v < 256 and chr(v) in string.printable for v in self.values)
+
+    def ascii(self):
+        return ''.join(map(chr, self.values))
+
+    @override
+    def __repr__(self) -> str:
+        if self.is_ascii():
+            return f'{self.address:>5}  ascii {self.ascii()!r}'
+        else:
+            assert len(self.values) == 1
+            return f'{self.address:>5}  byte [{self.values[0]}]'
 
 
 def disassemble(memory: list[int], addr=0, lines=15):
+    results = []
+    instructions = []
+
     while addr < len(memory) and lines > 0:
         try:
             opcode, args = read_instruction(memory, addr)
             curaddr = addr
+            instructions.append(Instruction(curaddr, opcode, args))
 
             # combine multiple character outputs into one string
             if opcode.name == 'out' and not is_reg(args[0]):
@@ -78,24 +127,38 @@ def disassemble(memory: list[int], addr=0, lines=15):
                     )
                     if next_opcode.name != 'out' or is_reg(next_args[0]):
                         break
-
+                    instructions.append(
+                        Instruction(curaddr, next_opcode, next_args)
+                    )
                     outstring += chr(next_args[0])
                     addr = next_addr
                     next_addr += len(opcode)
                 args = (outstring, )
 
-            print(curaddr, '', format_instruction(opcode, args))
+            # print(curaddr, '', format_instruction(opcode, args))
             addr += len(opcode)
             lines -= 1
 
+            results.append(Instructions(instructions))
+            instructions = []
+
         except KeyError:
             val = memory[addr]
-            if val < 256 and chr(val) in string.printable:
-                val = repr(chr(val)) + f' [{val}]'
-            else:
-                val = f'[{val}]'
-            print(addr, ' err %s' % val)
+            rv = RawValue(addr, [val])
+
+            # # merge contiguous ascii characters into one.
+            # # NOTE: some ascii will be misinterpreted as other instructions
+            # if rv.is_ascii() and results:
+            #     top = results[-1]
+            #     if isinstance(top, RawValue) and top.is_ascii():
+            #         rv = RawValue(top.address, top.values + rv.values)
+            #         results.pop()
+
+            results.append(rv)
             addr += 1
+
+    for r in results:
+        print(r)
 
 
 def main():
