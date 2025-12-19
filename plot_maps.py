@@ -13,7 +13,7 @@ def plot_edges(edges, descs, fname=None, show=False):
 
     plt.figure(figsize=(8, 6))
 
-    G = nx.DiGraph()
+    G = nx.MultiDiGraph()
 
     for loc in edges:
         G.add_node(loc, label=names.get(loc, str(loc)))
@@ -83,7 +83,7 @@ def plot_edges_interactive(edges, descs, fname='graph.html'):
         m = re.search(r'== (.*?) ==', desc)
         names[loc] = m.group(1) if m else str(loc)
 
-    G = nx.DiGraph()
+    G = nx.MultiDiGraph()
 
     for loc in edges:
         name = names.get(loc, str(loc))
@@ -97,13 +97,12 @@ def plot_edges_interactive(edges, descs, fname='graph.html'):
 
     for src, targets in edges.items():
         for dst, action in targets:
-            if src != dst:
-                G.add_edge(
-                    src,
-                    dst,
-                    label=action,
-                    title=action,
-                )
+            G.add_edge(
+                src,
+                dst,
+                label=action,
+                title=action,
+            )
 
     net = Network(
         height='1400px',
