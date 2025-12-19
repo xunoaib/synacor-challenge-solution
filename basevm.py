@@ -212,22 +212,22 @@ class BaseVM:
     def clone(self):
         return self.__class__.from_snapshot(self.snapshot())
 
-    def load_snapshot(self, snapshot: dict[str, Any]):
+    def load_snapshot(self, state: dict[str, Any]):
         for attrib in self.SNAPSHOT_ATTRS:
-            setattr(self, attrib, copy.deepcopy(snapshot[attrib]))
+            setattr(self, attrib, copy.deepcopy(state[attrib]))
 
     @override
     def __repr__(self):
         return f'<{self.__class__.__name__}(pc={self.pc}, loc={self.location})>'
 
     @staticmethod
-    def read_snapshot(fname):
+    def read_snapshot_file(fname):
         with open(fname) as f:
             return ast.literal_eval(f.read())
 
     @classmethod
     def from_snapshot_file(cls, fname):
-        return cls.from_snapshot(cls.read_snapshot(fname))
+        return cls.from_snapshot(cls.read_snapshot_file(fname))
 
     @classmethod
     def from_snapshot(cls, snapshot):

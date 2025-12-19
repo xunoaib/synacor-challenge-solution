@@ -4,10 +4,9 @@ import readline
 from pathlib import Path
 from typing import override
 
-from colorama import Fore, Style
-
-import utils
 from basevm import BaseVM
+from disassembler import disassemble
+from utils import diff_vms, find_teleporter_call
 
 ALIASES = {
     'l': 'look',
@@ -22,6 +21,8 @@ ALIASES = {
     'pa': 'passage',
 }
 
+SNAPSHOTS_DIR = Path('snapshots')
+
 
 class VM(BaseVM):
 
@@ -33,15 +34,15 @@ class VM(BaseVM):
     def input(self):
         self.send(input('\033[93;1mdbg>\033[0m '))
 
-    def sendcopy(self, cmd):
-        '''Sends a command to a copy of the current VM and returns the new VM'''
+    def sendcopy(self, cmd) -> 'VM':
+        '''Sends a command to a copy of the current VM, returning the new VM'''
 
         vm = self.clone()
         vm.send(cmd)
         return vm
 
     @override
-    def send(self, cmd):
+    def send(self, cmd) -> None:
         if ';' in cmd:
             # prevent these from interfering with breakpoints?
             for subcmd in cmd.split(';'):
@@ -60,10 +61,10 @@ class VM(BaseVM):
 
         super().send(cmd)
 
-    def sendread(self, cmd):
-        self.read()
-        self.send(cmd)
-        return self.read()
+    def sendread(self, cmd) -> str:
+        self.read()  # discard old output
+        self.send(cmd)  # run command
+        return self.read()  # return new output
 
     @override
     def execute(self, opcode, args):
@@ -73,11 +74,11 @@ class VM(BaseVM):
             self.registers[0] = 6
             self.registers[1] = 5
             self.registers[7] = 25734  # secret value
-            return self.get_next_instruction()
+            return True
         return super().execute(opcode, args)
 
     def patch_teleporter_call(self):
-        self.teleport_call_addr = utils.find_teleporter_call(self.memory)
+        self.teleport_call_addr = find_teleporter_call(self.memory)
 
 
 def debug_cmd(vm: VM, cmd: str):
@@ -100,9 +101,8 @@ def debug_cmd(vm: VM, cmd: str):
             print('pc =', vm.pc)
 
         case ['save', *fname]:
-            if not fname:
-                fname = ['last']
-            directory = Path('snapshots')
+            fname = fname or ['last']
+            directory = SNAPSHOTS_DIR
             directory.mkdir(exist_ok=True)
             fname = directory / fname[0]
             with open(fname, 'w') as f:
@@ -110,23 +110,24 @@ def debug_cmd(vm: VM, cmd: str):
             print('saved snapshot to', fname)
 
         case ['load', fname]:
-            fname = Path('snapshots') / fname
+            fname = SNAPSHOTS_DIR / fname
             with open(fname) as f:
                 snapshot = ast.literal_eval(f.read())
             vm.load_snapshot(snapshot)
             print('restored snapshot from ', fname)
 
         case ['diff', fname1, *fnames]:
-            directory = Path('snapshots')
+            directory = SNAPSHOTS_DIR
             vm1 = vm.from_snapshot_file(directory / fname1)
             if fnames:
                 vm2 = vm.from_snapshot_file(directory / fnames[0])
             else:
                 vm2 = vm
-            diffs = utils.diff_vms(vm1, vm2)
+            diffs = diff_vms(vm1, vm2)
             __import__('pprint').pprint(diffs)
 
         case ['giveall']:
+            # give all known items (note: these addrs vary between binaries)
             for addr in range(2670, 2734 + 1, 4):
                 vm.memory[addr] = 0
 
@@ -168,21 +169,21 @@ def debug_cmd(vm: VM, cmd: str):
             vm.location = int(newloc)
 
         case ['dis']:
-            from disassembler import disassemble
             disassemble(vm.memory, vm.pc, 15)
 
         case ['dis', lines]:
-            from disassembler import disassemble
             disassemble(vm.memory, vm.pc, int(lines))
 
         case ['dis', lines, addr]:
-            from disassembler import disassemble
             disassemble(vm.memory, int(addr), int(lines))
 
         case ['solve', 'coins']:
             coins = [
-                'blue coin', 'red coin', 'shiny coin', 'concave coin',
-                'corroded coin'
+                'blue coin',
+                'red coin',
+                'shiny coin',
+                'concave coin',
+                'corroded coin',
             ]
             for coin in coins:
                 vm.send('use ' + coin)

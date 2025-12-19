@@ -57,7 +57,7 @@ def parse_opcodes(arch_spec_fname='arch-spec') -> dict[int, Opcode]:
 OPCODES = parse_opcodes()
 
 
-def diff_snapshot(snap1, snap2):
+def diff_snapshots(snap1, snap2):
     diff_result = {}
     for key in snap1:
         v1 = snap1[key]
@@ -77,8 +77,8 @@ def diff_snapshot(snap1, snap2):
     return diff_result
 
 
-def diff_vms(v1, v2):
-    return diff_snapshot(v1.snapshot(), v2.snapshot())
+def diff_vms(v1: 'VM', v2: 'VM'):
+    return diff_snapshots(v1.snapshot(), v2.snapshot())
 
 
 def rprint_diff(diff):
@@ -125,7 +125,7 @@ def find_teleporter_call(memory: list[int]):
     return addrs[0]
 
 
-def calculate_location_addr(vm: 'EnhancedCPU'):
+def calculate_location_addr(vm: 'VM'):
     print('Calculating location address')
     vm = vm.clone()
     vm.run()
