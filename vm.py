@@ -146,13 +146,12 @@ class VM(BaseVM):
 
     @classmethod
     def from_snapshot(cls, snapshot: dict):
-        self = cls()
-        self.apply_snapshot(snapshot)
-        return self
+        return cls().apply_snapshot(snapshot)
 
     def apply_snapshot(self, snapshot: dict):
         for attrib, value in snapshot.items():
             setattr(self, attrib, value)
+        return self
 
     def clone(self):
         return deepcopy(self)
