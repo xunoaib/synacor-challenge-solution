@@ -73,6 +73,12 @@ class Registers:
         ), f'Unexpected class: {type(other)}'
         return self._regs == other._regs
 
+    def __iter__(self):
+        return iter(self._regs)
+
+    def __len__(self):
+        return len(self._regs)
+
 
 class BaseVM:
 

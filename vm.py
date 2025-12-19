@@ -201,10 +201,9 @@ def debug_cmd(vm: VM, cmd: str):
         case ['diff', fname1, *fnames]:
             directory = SNAPSHOTS_DIR
             vm1 = vm.from_snapshot_file(directory / fname1)
+            vm2 = vm
             if fnames:
                 vm2 = vm.from_snapshot_file(directory / fnames[0])
-            else:
-                vm2 = vm
             diffs = diff_vms(vm1, vm2)
             __import__('pprint').pprint(diffs)
 
@@ -300,15 +299,15 @@ def diff_snapshots(snap1: VMSnapshot, snap2: VMSnapshot):
         if v1 == v2:
             continue
 
-        if isinstance(v1, list):
-            diff_result[key] = [
+        if isinstance(v1, list) or isinstance(v1, Registers):
+            result[key] = [
                 (idx, subv1, subv2)
                 for idx, (subv1, subv2) in enumerate(zip_longest(v1, v2))
                 if subv1 != subv2
             ]
         else:
-            diff_result[key] = (v1, v2)
-    return diff_result
+            result[key] = (v1, v2)
+    return result
 
 
 def diff_vms(v1: VM, v2: VM):
@@ -316,7 +315,7 @@ def diff_vms(v1: VM, v2: VM):
 
 
 def find_memory_pattern(memory: list[int], code: list[int | None]):
-    '''Find the given binary pattern in memory, ignoring None's'''
+    '''Find the given binary pattern in memory, ignoring Nones'''
 
     n = len(code)
     return [
@@ -326,7 +325,7 @@ def find_memory_pattern(memory: list[int], code: list[int | None]):
 
 
 def find_teleporter_call(memory: list[int]):
-    '''Find and patch the inefficient teleporter call'''
+    '''Find the address of the teleporter call in memory'''
 
     # Code to search for (ignoring special memory addresses)
     code = [
@@ -342,20 +341,23 @@ def find_teleporter_call(memory: list[int]):
 
 
 def calculate_location_addr(vm: VM):
-    '''Identifies the memory addresss which identifies the VM's current location'''
+    '''Identify the memory addresss which stores the VM's current location'''
 
     vms = [vm.clone().run()]
 
+    # Simulate some movement
     for cmd in ['doorway', 'north', 'north']:
         vms.append(vms[-1].sendcopy(cmd))
 
+    # Diff the VM's memory
     loc_addr = None
     for a, b in pairwise(vms):
         diff = diff_vms(a, b)
         assert 'memory' in diff, 'Diff does not contain memory'
         mem = diff['memory']
         addrs = [d[0] for d in mem]
-        loc_addr = addrs[0]  # assume lowest (may be incorrect)
+        # assume lowest (generally true but could be incorrect)
+        loc_addr = addrs[0]
 
     assert loc_addr
     return loc_addr
