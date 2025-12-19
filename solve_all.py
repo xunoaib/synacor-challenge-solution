@@ -3,6 +3,9 @@ import hashlib
 import re
 from pathlib import Path
 
+import matplotlib.pyplot as plt
+import networkx as nx
+
 import utils
 from vm import VM
 
@@ -90,10 +93,10 @@ def print_new_locs(known_locs: dict[int, VM], vms: dict[int, VM]):
 
 
 def find_all_states(vm: VM):
-    _, descs, vms = explore(vm)
+    edges, descs, vms = explore(vm)
     item_addrs = identify_item_addrs(list(vms.values()))
     print(f'Found {len(vms)} states and {len(item_addrs)} items\n')
-    return descs, vms, item_addrs
+    return edges, descs, vms, item_addrs
 
 
 def take_all_items(vm: VM, item_addrs: dict[str, int]):
@@ -107,10 +110,10 @@ def take_all_items(vm: VM, item_addrs: dict[str, int]):
 
 
 def find_and_collect_all(vm: VM, known_locs: dict[int, VM]):
-    descs, vms, item_addrs = find_all_states(vm)
+    edges, descs, vms, item_addrs = find_all_states(vm)
     print_new_locs(known_locs, vms)
     vm = take_all_items(vm, item_addrs)
-    return vm, descs, known_locs | vms
+    return edges, vm, descs, known_locs | vms
 
 
 def print_code(num: int, code: str):
@@ -140,7 +143,8 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     assert m3, 'Missing post-test code'
     print_code(3, m3.group(1))
 
-    vm, descs, known_locs = find_and_collect_all(vm, {})
+    edges, vm, descs, known_locs = find_and_collect_all(vm, {})
+    plot_edges(edges, descs)
 
     vm.send('use can')
     vm.send('use lantern')
@@ -154,7 +158,9 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     print_code(4, m.group(1))
 
     print('\033[93m>> Solving twisty maze\033[0m')
-    vm, descs, known_locs = find_and_collect_all(vm, known_locs)
+
+    edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
+    plot_edges(edges, descs)
 
     code5 = next(
         (
@@ -179,7 +185,8 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     vm.send('use concave coin')
     vm.send('use corroded coin')
 
-    vm, descs, known_locs = find_and_collect_all(vm, known_locs)
+    edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
+    plot_edges(edges, descs)
 
     print('\033[93m>> Using teleporter\033[0m')
     vm.send('use teleporter')
@@ -189,7 +196,8 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     assert m, 'Missing first teleport code'
     print_code(6, m.group(1))
 
-    vm, descs, known_locs = find_and_collect_all(vm, known_locs)
+    edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
+    plot_edges(edges, descs)
 
     print('\033[93m>> Using teleporter again\033[0m')
     vm.patch_teleporter_call()
@@ -203,7 +211,10 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     assert m, 'Missing second teleport code'
     print_code(7, m.group(1))
 
-    vm, descs, known_locs = find_and_collect_all(vm, known_locs)
+    edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
+    plot_edges(edges, descs)
+
+    vm.interactive()
 
     print('\033[93m>> Solving antechamber\033[0m')
     vm.location = next(
@@ -223,6 +234,46 @@ def solve_all(arch_spec_fname, challenge_bin_fname):
     )
     assert m, 'Missing mirror code'
     print_code(8, reflect(m.group(1)))
+
+
+def plot_edges(edges, descs):
+    names = {}
+    for loc, desc in descs.items():
+        m = re.search(r'== (.*?) ==', desc)
+        names[loc] = m.group(1) if m else str(loc)
+
+    G = nx.DiGraph()
+
+    for loc in edges:
+        G.add_node(loc, label=names.get(loc, str(loc)))
+
+    for src, targets in edges.items():
+        for dst, action in targets:
+            if src != dst:
+                G.add_edge(src, dst, label=action)
+
+    pos = nx.spring_layout(G, seed=42)
+
+    nx.draw(
+        G,
+        pos,
+        node_size=400,
+        node_color='lightblue',
+        edge_color='gray',
+        arrows=True,
+        with_labels=False,
+    )
+
+    node_labels = {n: names.get(n, str(n)) for n in G.nodes}
+    nx.draw_networkx_labels(G, pos, node_labels, font_size=8)
+
+    edge_labels = nx.get_edge_attributes(G, 'label')
+    nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=7)
+
+    plt.title('Location Graph')
+    plt.axis('off')
+    plt.tight_layout()
+    plt.show()
 
 
 def main():
