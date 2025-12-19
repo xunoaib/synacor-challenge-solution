@@ -3,10 +3,21 @@ import re
 import readline
 from itertools import pairwise, zip_longest
 from pathlib import Path
-from typing import override
+from typing import TypedDict, override
 
 from basevm import BaseVM, Registers
 from disassembler import disassemble
+
+
+class VMSnapshot(TypedDict):
+    memory: list[int]
+    stack: list[int]
+    registers: list[int]
+    pc: int
+    input_buffer: list[str]
+    output_buffer: str
+    location_addr: int | None
+
 
 ALIASES = {
     'l': 'look',
@@ -116,7 +127,7 @@ class VM(BaseVM):
     def serialize(self) -> str:
         return str(self.snapshot())
 
-    def snapshot(self):
+    def snapshot(self) -> VMSnapshot:
         return {
             'memory': list(self.memory),
             'stack': list(self.stack),
@@ -127,7 +138,7 @@ class VM(BaseVM):
             'location_addr': self.location_addr,
         }
 
-    def apply_snapshot(self, snapshot: dict):
+    def apply_snapshot(self, snapshot: VMSnapshot):
         self.memory = list(snapshot['memory'])
         self.stack = list(snapshot['stack'])
         self.registers = Registers(list(snapshot['registers']))
@@ -138,7 +149,7 @@ class VM(BaseVM):
         return self
 
     @classmethod
-    def from_snapshot(cls, snapshot: dict):
+    def from_snapshot(cls, snapshot: VMSnapshot):
         return cls().apply_snapshot(snapshot)
 
     @classmethod
@@ -280,8 +291,8 @@ def debug_cmd(vm: VM, cmd: str):
             print('unknown debug command')
 
 
-def diff_snapshots(snap1: dict, snap2: dict):
-    diff_result = {}
+def diff_snapshots(snap1: VMSnapshot, snap2: VMSnapshot):
+    result = {}
     for key in snap1:
         v1 = snap1[key]
         v2 = snap2[key]
