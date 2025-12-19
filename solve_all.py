@@ -99,6 +99,10 @@ def find_all_states(vm: VM):
 
 
 def take_all_items(vm: VM, item_addrs: dict[str, int]):
+    if not item_addrs:
+        print('No new items.')
+        return vm
+
     vm = deepcopy(vm)
     print()
     for name, addr in item_addrs.items():
@@ -117,6 +121,7 @@ def find_and_collect_all(vm: VM, known_locs: dict[int, VM]):
 
 def print_code(num: int, code: str):
     print(f'\033[92mCode #{num}: {code}\033[0m: {md5(code)}')
+    return code
 
 
 def solve_all(
@@ -129,7 +134,7 @@ def solve_all(
 
     m1 = re.search("Here's a code for the challenge website: (.*?)\n", data)
     assert m1, 'Missing arch-spec code'
-    print_code(1, m1.group(1))
+    yield print_code(1, m1.group(1))
 
     print(f'\033[93mLoading binary: {challenge_bin_fname}\033[0m')
 
@@ -139,11 +144,11 @@ def solve_all(
 
     m2 = re.search('this one into the challenge website: (.*?)\n', data)
     assert m2, 'Missing pre-test code'
-    print_code(2, m2.group(1))
+    yield print_code(2, m2.group(1))
 
     m3 = re.search('The self-test completion code is: (.*?)\n', data)
     assert m3, 'Missing post-test code'
-    print_code(3, m3.group(1))
+    yield print_code(3, m3.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, {})
     plot and plot(edges, descs, 'map0')
@@ -157,7 +162,7 @@ def solve_all(
         r'You find yourself writing "(.*?)" on the tablet', vm.read()
     )
     assert m, 'Missing tablet code'
-    print_code(4, m.group(1))
+    yield print_code(4, m.group(1))
 
     print('\033[93m>> Solving twisty maze\033[0m')
 
@@ -171,7 +176,7 @@ def solve_all(
         ), None
     )
     assert code5, 'Missing maze code'
-    print_code(5, code5)
+    yield print_code(5, code5)
 
     # Go to central hall
     vm.location = next(
@@ -196,7 +201,7 @@ def solve_all(
         r'you think you see a pattern in the stars...\n\s+(.*?)\n', vm.read()
     )
     assert m, 'Missing first teleport code'
-    print_code(6, m.group(1))
+    yield print_code(6, m.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
     plot and plot(edges, descs, 'map3')
@@ -211,7 +216,7 @@ def solve_all(
         vm.read()
     )
     assert m, 'Missing second teleport code'
-    print_code(7, m.group(1))
+    yield print_code(7, m.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
     plot and plot(edges, descs, 'map4')
@@ -233,13 +238,13 @@ def solve_all(
         'Through the mirror, you see "(.*)" scrawled in charcoal', vm.read()
     )
     assert m, 'Missing mirror code'
-    print_code(8, reflect(m.group(1)))
+    yield print_code(8, reflect(m.group(1)))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
     plot and plot(edges, descs, 'map5')
 
     if not plot:
-        print('Note: Skipped writing maps. Pass arg to write maps')
+        print('\033[95mNOTE: Skipped writing maps to HTML/PNG.\n\033[0m')
 
 
 def main():
@@ -288,7 +293,23 @@ def main():
 
     plot = plot_funcs.get(args.map_format, None)
 
-    solve_all(archfile, binfile, plot)
+    codes = list(solve_all(archfile, binfile, plot))
+
+    hashes = [
+        '1da5f227bccdc25af7e599945a6c6916',
+        '447e64a7d2247966d313644b798cce42',
+        '5fb7a87f352cdcefb74a1beaadf12b59',
+        '98791235f5ecadeac63d33d4100c9cce',
+        '51914495557f319b958b5c5d06aae08e',
+        '254937f833c6ec0b43ff1ed6c17ac3f5',
+        '79716cc0af3b0d3113b2174d2dbfda2a',
+        '9f7a2eb9bc3bf7335f7c85ff3b29ab4e',
+    ]
+
+    for i, (code, hash) in enumerate(zip(codes, hashes)):
+        md5code = md5(code)
+        success = '✅' if hash == md5code else '❌'
+        print(f'{success} Code #{i}: md5({code}) == {md5code} ?= {hash}')
 
 
 if __name__ == '__main__':
