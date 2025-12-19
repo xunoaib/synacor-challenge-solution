@@ -31,8 +31,7 @@ class VM(BaseVM):
 
     @override
     def input(self):
-        cmd = input(Fore.YELLOW + Style.BRIGHT + 'dbg> ' + Style.RESET_ALL)
-        self.send(cmd)
+        self.send(input('\033[93;1mdbg>\033[0m '))
 
     def sendcopy(self, cmd):
         '''Sends a command to a copy of the current VM and returns the new VM'''
@@ -197,8 +196,7 @@ def debug_cmd(vm: VM, cmd: str):
 
             for i, cmd in enumerate(commands):
                 print(
-                    Fore.YELLOW + f'>>> [{i}/{len(commands)}] sending "{cmd}"'
-                    + Style.RESET_ALL
+                    f'\033[93m>>> [{i}/{len(commands)}] sending "{cmd}"\033[0m'
                 )
                 vm.send(cmd)
                 print(vm.read())
