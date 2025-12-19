@@ -78,7 +78,7 @@ def plot_edges_interactive(edges, descs, fname="graph.html"):
                 )
 
     net = Network(
-        height='800px',
+        height='1400px',
         width='100%',
         directed=True,
         bgcolor='#ffffff',

@@ -259,25 +259,32 @@ def main():
         default='.',
         help='Path to directory containing challenge files',
     )
-    parser.add_argument('-p', '--plot', action='store_true')
+    parser.add_argument(
+        '-p',
+        '--map-format',
+        default='html',
+        choices=['png', 'html'],
+    )
     args = parser.parse_args()
 
     archfile = Path(args.dir) / args.archfile
     binfile = Path(args.dir) / args.binfile
 
+    mapdir = Path('maps')
+    mapdir.mkdir(exist_ok=True)
+
     plot_funcs = {
         'png':
-        lambda edges, descs, name:
-        plot_edges(edges, descs, fname=f'{name}.png', show=False),
+        lambda edges, descs, name: plot_edges(
+            edges, descs, fname=str(mapdir / f'{name}.png'), show=False
+        ),
         'html':
-        lambda edges, descs, name:
-        plot_edges_interactive(edges, descs, fname=f'{name}.html'),
+        lambda edges, descs, name: plot_edges_interactive(
+            edges, descs, fname=str(mapdir / f'{name}.html')
+        ),
     }
 
-    method = 'png'
-    method = 'html'
-
-    plot = plot_funcs.get(method, None)
+    plot = plot_funcs.get(args.map_format, None)
 
     solve_all(archfile, binfile, plot)
 
