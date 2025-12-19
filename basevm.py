@@ -1,6 +1,6 @@
 import ast
 import copy
-from typing import override
+from typing import Any, override
 
 from utils import (calculate_location_addr, is_reg, load_bytecode,
                    read_instruction, to_reg)
@@ -19,6 +19,16 @@ class Registers:
 
 
 class BaseVM:
+
+    SNAPSHOT_ATTRS = [
+        'memory',
+        'stack',
+        'registers',
+        'pc',
+        'input_buffer',
+        'output_buffer',
+        'location_addr',
+    ]
 
     def __init__(self, binfile=None):
         self.memory = []
@@ -88,6 +98,8 @@ class BaseVM:
         return read_instruction(self.memory, self.pc)
 
     def step(self):
+        ''' Returns False if halted or waiting for input '''
+
         opcode, args = self.get_next_instruction()
         self.ticks += 1
         return self.execute(opcode, args)
@@ -98,8 +110,9 @@ class BaseVM:
     def execute(self, opcode, args):
         '''
         Executes the given instruction, updates the program counter, and
-        returns true if the program has not halted.
+        returns False if halted or waiting for input
         '''
+
         new_pc = self.pc + len(opcode)
         a, b, c = args + (None, ) * (3 - len(args))
 
@@ -191,24 +204,15 @@ class BaseVM:
 
     def snapshot(self):
         return {
-            'memory': self.memory,
-            'stack': self.stack,
-            'registers': self.registers,
-            'pc': self.pc,
-            'input_buffer': self.input_buffer,
-            'output_buffer': self.output_buffer,
-            'location_addr': self.location_addr,
+            k: copy.deepcopy(getattr(self, k))
+            for k in self.SNAPSHOT_ATTRS
         }
 
     def clone(self):
-        snapshot = self.snapshot()
-        return self.__class__.from_snapshot(snapshot)
+        return self.__class__.from_snapshot(self.snapshot())
 
-    def load_snapshot(self, snapshot: dict):
-        for attrib in [
-            'memory', 'stack', 'registers', 'pc', 'input_buffer',
-            'output_buffer', 'location_addr'
-        ]:
+    def load_snapshot(self, snapshot: dict[str, Any]):
+        for attrib in self.SNAPSHOT_ATTRS:
             setattr(self, attrib, copy.deepcopy(snapshot[attrib]))
 
     @override
@@ -222,8 +226,7 @@ class BaseVM:
 
     @classmethod
     def from_snapshot_file(cls, fname):
-        snapshot = cls.read_snapshot(fname)
-        return cls.from_snapshot(snapshot)
+        return cls.from_snapshot(cls.read_snapshot(fname))
 
     @classmethod
     def from_snapshot(cls, snapshot):
