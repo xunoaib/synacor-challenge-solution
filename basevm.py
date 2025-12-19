@@ -2,8 +2,8 @@ import ast
 import copy
 from typing import Any, override
 
-from utils import (calculate_location_addr, is_reg, load_bytecode,
-                   read_instruction, to_reg)
+from helpers import calculate_location_addr
+from utils import Opcode, is_reg, load_bytecode, read_instruction, to_reg
 
 
 class Registers:
@@ -11,7 +11,7 @@ class Registers:
     def __init__(self):
         self._regs = [0] * 8
 
-    def __getitem__(self, idx):
+    def __getitem__(self, idx) -> int:
         return self._regs[idx]
 
     def __setitem__(self, idx, val):
@@ -31,12 +31,12 @@ class BaseVM:
     ]
 
     def __init__(self, binfile=None):
-        self.memory = []
+        self.memory: list[int] = []
         self.registers = Registers()
-        self.stack = []
-        self.pc = 0  # program counter
-        self.input_buffer = []  # keyboard input buffer
-        self.output_buffer = ''
+        self.stack: list[int] = []
+        self.pc: int = 0  # program counter
+        self.input_buffer: list[str] = []  # keyboard input buffer
+        self.output_buffer: str = ''
         self.ticks = 0
         self.location_addr: int | None = None
         self.is_interactive = False
@@ -49,7 +49,7 @@ class BaseVM:
         self.pc = 0
         self.location_addr = calculate_location_addr(self)
 
-    def value(self, arg):
+    def value(self, arg) -> int:
         return self.registers[arg - 32768] if is_reg(arg) else arg
 
     @property
@@ -104,17 +104,17 @@ class BaseVM:
         self.ticks += 1
         return self.execute(opcode, args)
 
-    def set_reg(self, arg: int, value: int):
+    def set_reg(self, arg, value):
         self.registers[to_reg(arg)] = value
 
-    def execute(self, opcode, args):
+    def execute(self, opcode: Opcode, args: tuple[int, ...]):
         '''
         Executes the given instruction, updates the program counter, and
         returns False if halted or waiting for input
         '''
 
         new_pc = self.pc + len(opcode)
-        a, b, c = args + (None, ) * (3 - len(args))
+        a, b, c = args + (0, ) * (3 - len(args))
 
         match opcode.name:
             case 'noop':

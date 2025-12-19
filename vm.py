@@ -6,7 +6,7 @@ from typing import override
 
 from basevm import BaseVM
 from disassembler import disassemble
-from utils import diff_vms, find_teleporter_call
+from helpers import diff_vms, find_teleporter_call
 
 ALIASES = {
     'l': 'look',
