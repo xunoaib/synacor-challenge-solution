@@ -8,119 +8,10 @@ from plot_maps import plot_edges, plot_edges_interactive
 from vm import VM, diff_vms
 
 
-def md5(s: str):
-    return hashlib.md5(s.encode()).hexdigest()
-
-
-def reflect(s: str):
-    d = {'d': 'b', 'p': 'q'}
-    d |= {v: k for k, v in d.items()}
-    return ''.join(d.get(c, c) for c in s)[::-1]
-
-
-def neighbor_locs(vm: VM) -> list[tuple[str, VM]]:
-    return [(dir, vm.sendcopy(dir)) for dir in find_exits(vm)]
-
-
-def find_exits(vm: VM):
-    vm = vm.clone().flush().send('look')
-    m = re.search(
-        r'\nThere (is|are) (\d+) exits?:\n(.*)\nWhat do you do?', vm.read(),
-        re.DOTALL
-    )
-    return re.findall(r'- (.*?)\n', m.group(3)) if m else []
-
-
-def find_items(vm: VM):
-    vm = vm.clone().flush().send('look')
-    m = re.search(
-        r'\nThings of interest here:\n(.*?)\n\n', vm.read(), re.DOTALL
-    )
-    return re.findall(r'- (.*?)\n', m.group(1) + '\n') if m else []
-
-
-def identify_item_addrs(vms: list[VM]):
-    addrs = {}
-    for vm in vms:
-        for item in find_items(vm):
-            vm2 = vm.sendcopy('take ' + item)
-            result = diff_vms(vm, vm2)
-            addr = next(
-                idx for idx, old, new in result.get('memory', [])
-                if old and not new
-            )
-            addrs[item] = addr
-    return addrs
-
-
-def explore(vm: VM):
-    vm.flush().send('look')
-
-    vms: dict[int, VM] = {}
-    # map current vm location => [(north_room_id, 'north'), ...]
-    edges: dict[int, list[tuple[int, str]]] = {}
-    descriptions = {vm.location: vm.read().strip()}
-    q = [vm]
-
-    while q:
-        vm = q.pop(0)
-        states = list(neighbor_locs(vm))
-        edges[vm.location] = [(n.location, move) for move, n in states]
-        for _, n in states:
-            if n.location not in vms:
-                descriptions[n.location] = n.read().strip()
-                vms[n.location] = n
-                q.append(n)
-
-    return edges, descriptions, vms
-
-
-def print_new_locs(known_locs: dict[int, VM], vms: dict[int, VM]):
-    for loc in set(vms) - set(known_locs):
-        v = vms[loc]
-        v.read()
-        d = v.sendcopy('look').read()
-        if m := re.search(r'== (.*?) ==', d):
-            d = m.group(1)
-        print(f'New location: {loc} ({d})')
-
-
-def find_all_states(vm: VM):
-    edges, descs, vms = explore(vm)
-    item_addrs = identify_item_addrs(list(vms.values()))
-    print(f'Found {len(vms)} states and {len(item_addrs)} items\n')
-    return edges, descs, vms, item_addrs
-
-
-def take_all_items(vm: VM, item_addrs: dict[str, int]):
-    if not item_addrs:
-        print('No new items.')
-        return vm
-
-    vm = vm.clone()
-    print()
-    for name, addr in item_addrs.items():
-        print(f'Giving mem[{addr}] = {name}')
-        vm.memory[addr] = 0
-    print()
-    return vm
-
-
-def find_and_collect_all(vm: VM, known_locs: dict[int, VM]):
-    edges, descs, vms, item_addrs = find_all_states(vm)
-    print_new_locs(known_locs, vms)
-    vm = take_all_items(vm, item_addrs)
-    return edges, vm, descs, known_locs | vms
-
-
-def print_code(num: int, code: str):
-    print(f'\033[92mCode #{num}: {code}\033[0m: {md5(code)}')
-    return code
-
-
 def solve_all(
-    arch_spec_fname, challenge_bin_fname,
-    plot: Callable[[dict[int, Any], dict[int, Any], str], None] | None
+    arch_spec_fname,
+    challenge_bin_fname,
+    plot: Callable[[dict[int, Any], dict[int, Any], str], None] | None,
 ):
     print(f'\033[93mLoading arch-spec: {arch_spec_fname}\033[0m')
     with open(arch_spec_fname) as f:
@@ -239,6 +130,117 @@ def solve_all(
 
     if not plot:
         print('\033[95mNOTE: Skipped writing maps to HTML/PNG.\n\033[0m')
+
+
+def find_and_collect_all(vm: VM, known_locs: dict[int, VM]):
+    edges, descs, vms, item_addrs = find_all_states(vm)
+    vm = give_items(vm, item_addrs)
+    print_new_locs(known_locs, vms)
+    return edges, vm, descs, known_locs | vms
+
+
+def find_all_states(vm: VM):
+    edges, descs, vms = explore(vm)
+    item_addrs = identify_item_addrs(list(vms.values()))
+    print(f'Found {len(vms)} states and {len(item_addrs)} items\n')
+    return edges, descs, vms, item_addrs
+
+
+def explore(vm: VM):
+    vm.flush().send('look')
+
+    vms: dict[int, VM] = {}
+    # map current vm location => [(north_room_id, 'north'), ...]
+    edges: dict[int, list[tuple[int, str]]] = {}
+    descriptions = {vm.location: vm.read().strip()}
+    q = [vm]
+
+    while q:
+        vm = q.pop(0)
+        states = list(neighbor_locs(vm))
+        edges[vm.location] = [(n.location, move) for move, n in states]
+        for _, n in states:
+            if n.location not in vms:
+                descriptions[n.location] = n.read().strip()
+                vms[n.location] = n
+                q.append(n)
+
+    return edges, descriptions, vms
+
+
+def neighbor_locs(vm: VM) -> list[tuple[str, VM]]:
+    return [(dir, vm.sendcopy(dir)) for dir in find_exits(vm)]
+
+
+def find_exits(vm: VM):
+    vm = vm.clone().flush().send('look')
+    m = re.search(
+        r'\nThere (is|are) (\d+) exits?:\n(.*)\nWhat do you do?', vm.read(),
+        re.DOTALL
+    )
+    return re.findall(r'- (.*?)\n', m.group(3)) if m else []
+
+
+def find_items(vm: VM):
+    vm = vm.clone().flush().send('look')
+    m = re.search(
+        r'\nThings of interest here:\n(.*?)\n\n', vm.read(), re.DOTALL
+    )
+    return re.findall(r'- (.*?)\n', m.group(1) + '\n') if m else []
+
+
+def give_items(vm: VM, item_addrs: dict[str, int]):
+    if not item_addrs:
+        print('No new items.')
+        return vm
+
+    vm = vm.clone()
+    print()
+    for name, addr in item_addrs.items():
+        print(f'Giving mem[{addr}] = {name}')
+        vm.memory[addr] = 0
+    print()
+    return vm
+
+
+def print_new_locs(known_locs: dict[int, VM], vms: dict[int, VM]):
+    for loc in set(vms) - set(known_locs):
+        v = vms[loc]
+        v.read()
+        d = v.sendcopy('look').read()
+        if m := re.search(r'== (.*?) ==', d):
+            d = m.group(1)
+        print(f'New location: {loc} ({d})')
+
+
+def print_code(num: int, code: str):
+    print(f'\033[92mCode #{num}: {code}\033[0m: {md5(code)}')
+    return code
+
+
+def identify_item_addrs(vms: list[VM]):
+    '''Given a list of VMs, find the names and memory addresses of all visible items'''
+    addrs = {}
+    for vm in vms:
+        for item in find_items(vm):
+            vm2 = vm.sendcopy('take ' + item)
+            result = diff_vms(vm, vm2)
+            addr = next(
+                idx for idx, old, new in result.get('memory', [])
+                if old and not new
+            )
+            addrs[item] = addr
+    return addrs
+
+
+def reflect(s: str):
+    d = {'d': 'b', 'p': 'q'}
+    d |= {v: k for k, v in d.items()}
+    return ''.join(d.get(c, c) for c in s)[::-1]
+
+
+def md5(s: str):
+    return hashlib.md5(s.encode()).hexdigest()
 
 
 def main():
