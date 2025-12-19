@@ -43,6 +43,15 @@ class VM(BaseVM):
         self.teleport_call_addr = None
         self.location_addr = None
 
+    def interactive(self):
+        try:
+            while True:
+                self.run()
+                print(self.read(), end='')
+                self.send(input('cpu> '))
+        except EOFError:
+            pass
+
     @override
     def __repr__(self):
         return f'<{self.__class__.__name__}(pc={self.pc}, loc={self.location})>'

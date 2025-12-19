@@ -1,4 +1,11 @@
-from opcodes import Opcode, is_reg, load_bytecode, read_instruction, to_reg
+from itertools import batched
+
+from opcodes import Opcode, is_reg, read_instruction, to_reg
+
+
+def load_bytecode(binfile):
+    with open(binfile, 'rb') as f:
+        return [int.from_bytes(b, 'little') for b in batched(f.read(), 2)]
 
 
 class Registers:
@@ -16,52 +23,38 @@ class Registers:
 class BaseVM:
 
     def __init__(self, binfile=None):
-        self.memory: list[int] = load_bytecode(binfile) if binfile else []
+        self.memory = []
         self.registers = Registers()
         self.stack: list[int] = []
-        self.pc: int = 0  # program counter
-        self.input_buffer: list[str] = []  # keyboard input buffer
+        self.pc: int = 0
+        self.input_buffer: list[str] = []
         self.output_buffer: str = ''
+
+        if binfile:
+            self.memory = load_bytecode(binfile)
 
     def value(self, arg) -> int:
         return self.registers[arg - 32768] if is_reg(arg) else arg
 
-    def input(self):
-        self.send(input('cpu> '))
+    def set_reg(self, arg, value):
+        self.registers[to_reg(arg)] = value
 
     def send(self, cmd) -> None:
         self.input_buffer = list(cmd + '\n')
         self.run()
 
-    def interactive(self):
-        try:
-            while True:
-                self.run()
-                print(self.read(), end='')
-                self.input()
-        except EOFError:
-            pass
-
     def read(self):
-        '''Consumes and return all data from the output buffer'''
         result = self.output_buffer
         self.output_buffer = ''
         return result
 
     def run(self):
-        '''Runs until halted or waiting on input'''
         while self.step():
             pass
 
-    def get_next_instruction(self):
-        return read_instruction(self.memory, self.pc)
-
     def step(self) -> bool:
         '''Returns False if halted or waiting for input'''
-        return self.execute(*self.get_next_instruction())
-
-    def set_reg(self, arg, value):
-        self.registers[to_reg(arg)] = value
+        return self.execute(*read_instruction(self.memory, self.pc))
 
     def execute(self, opcode: Opcode, args: tuple[int, ...]):
         '''Executes the given instruction and returns False if halted or

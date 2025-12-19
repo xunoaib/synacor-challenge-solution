@@ -12,16 +12,6 @@ class Opcode:
         return 1 + self.nargs
 
 
-def load_bytecode(fname):
-    with open(fname, 'rb') as f:
-        data = f.read()
-
-    return [
-        int.from_bytes(data[i:i + 2], 'little')
-        for i in range(0, len(data), 2)
-    ]
-
-
 def is_reg(arg: int):
     return arg >= 32768
 
