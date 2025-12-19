@@ -1,7 +1,6 @@
-import pickle
+import ast
 import re
 import readline
-from copy import deepcopy
 from itertools import pairwise, zip_longest
 from pathlib import Path
 from typing import override
@@ -70,7 +69,7 @@ class VM(BaseVM):
     def sendcopy(self, cmd) -> 'VM':
         '''Sends a command to a copy of the current VM, returning the new VM'''
 
-        return deepcopy(self).send(cmd)
+        return self.clone().send(cmd)
 
     @override
     def send(self, cmd) -> 'VM':
@@ -115,8 +114,11 @@ class VM(BaseVM):
     # Snapshotting
     # ============
 
-    def serialize(self) -> bytes:
-        return pickle.dumps(self.snapshot())
+    def clone(self):
+        return self.from_snapshot(self.snapshot())
+
+    def serialize(self) -> str:
+        return str(self.snapshot())
 
     def snapshot(self):
         return {
@@ -135,8 +137,19 @@ class VM(BaseVM):
 
     @classmethod
     def from_snapshot_file(cls, fname: str | Path):
-        with open(fname, 'rb') as f:
-            return cls.from_snapshot(pickle.load(f))
+        return cls.from_snapshot(cls.snapshot_from_file(fname))
+
+    @classmethod
+    def snapshot_from_file(cls, fname: str | Path):
+        with open(fname) as f:
+            return ast.literal_eval(f.read())
+
+    def write_snapshot_file(self, fname: str | Path):
+        with open(fname, 'w') as f:
+            f.write(repr(self.snapshot()))
+
+    def apply_snapshot_file(self, fname: str | Path):
+        return self.apply_snapshot(self.snapshot_from_file(fname))
 
     def apply_snapshot(self, snapshot: dict):
         self.memory = list(snapshot['memory'])
@@ -170,15 +183,12 @@ def debug_cmd(vm: VM, cmd: str):
             directory = SNAPSHOTS_DIR
             directory.mkdir(exist_ok=True)
             fname = directory / fname[0]
-            with open(fname, 'wb') as f:
-                f.write(vm.serialize())
+            vm.write_snapshot_file(fname)
             print('saved snapshot to', fname)
 
         case ['load', fname]:
             fname = SNAPSHOTS_DIR / fname
-            with open(fname, 'rb') as f:
-                data = f.read()
-                vm.apply_snapshot(pickle.loads(data))
+            vm.apply_snapshot_file(fname)
             print('restored snapshot from', fname)
 
         case ['diff', fname1, *fnames]:
@@ -327,9 +337,7 @@ def find_teleporter_call(memory: list[int]):
 def calculate_location_addr(vm: VM):
     '''Identifies the memory addresss which identifies the VM's current location'''
 
-    vm = deepcopy(vm)
-    vm.run()
-    vms = [vm]
+    vms = [vm.clone().run()]
 
     for cmd in ['doorway', 'north', 'north']:
         vms.append(vms[-1].sendcopy(cmd))

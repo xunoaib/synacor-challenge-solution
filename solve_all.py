@@ -1,7 +1,6 @@
 import argparse
 import hashlib
 import re
-from copy import deepcopy
 from pathlib import Path
 from typing import Any, Callable
 
@@ -24,9 +23,7 @@ def neighbor_locs(vm: VM) -> list[tuple[str, VM]]:
 
 
 def find_exits(vm: VM):
-    vm = deepcopy(vm)
-    vm.read()
-    vm.send('look')
+    vm = vm.clone().flush().send('look')
     m = re.search(
         r'\nThere (is|are) (\d+) exits?:\n(.*)\nWhat do you do?', vm.read(),
         re.DOTALL
@@ -35,9 +32,7 @@ def find_exits(vm: VM):
 
 
 def find_items(vm: VM):
-    vm = deepcopy(vm)
-    vm.read()
-    vm.send('look')
+    vm = vm.clone().flush().send('look')
     m = re.search(
         r'\nThings of interest here:\n(.*?)\n\n', vm.read(), re.DOTALL
     )
@@ -59,8 +54,7 @@ def identify_item_addrs(vms: list[VM]):
 
 
 def explore(vm: VM):
-    vm.read()
-    vm.send('look')
+    vm.flush().send('look')
 
     vms: dict[int, VM] = {}
     # map current vm location => [(north_room_id, 'north'), ...]
@@ -103,7 +97,7 @@ def take_all_items(vm: VM, item_addrs: dict[str, int]):
         print('No new items.')
         return vm
 
-    vm = deepcopy(vm)
+    vm = vm.clone()
     print()
     for name, addr in item_addrs.items():
         print(f'Giving mem[{addr}] = {name}')

@@ -103,6 +103,10 @@ class BaseVM:
         self.output_buffer = ''
         return result
 
+    def flush(self):
+        self.read()
+        return self
+
     def run(self):
         while self.step():
             pass
