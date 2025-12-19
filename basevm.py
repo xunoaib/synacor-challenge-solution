@@ -29,6 +29,7 @@ class BaseVM:
         self.output_buffer = ''
         self.ticks = 0
         self.location_addr: int | None = None
+        self.is_interactive = False
 
         if binfile:
             self.load_program(binfile)
@@ -59,6 +60,7 @@ class BaseVM:
         self.run()
 
     def interactive(self):
+        self.is_interactive = True
         try:
             while True:
                 self.run()
@@ -66,6 +68,8 @@ class BaseVM:
                 self.input()
         except EOFError:
             pass
+        finally:
+            self.is_interactive = False
 
     def read(self):
         '''Read and remove all data from the output buffer'''
