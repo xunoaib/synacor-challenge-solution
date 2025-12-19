@@ -6,11 +6,23 @@ from utils import (calculate_location_addr, isreg, load_bytecode,
                    read_instruction, to_register)
 
 
+class Registers:
+
+    def __init__(self):
+        self._regs = [0] * 8
+
+    def __getitem__(self, idx):
+        return self._regs[idx]
+
+    def __setitem__(self, idx, val):
+        self._regs[idx] = val
+
+
 class BaseVM:
 
     def __init__(self, fname=None):
         self.memory = []
-        self.registers = [0] * 8
+        self.registers = Registers()
         self.stack = []
         self.pc = 0  # program counter
         self.input_buffer = []  # keyboard input buffer
