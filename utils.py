@@ -27,12 +27,12 @@ def load_bytecode(fname):
     ]
 
 
-def isreg(arg):
+def is_reg(arg):
     return arg >= 32768
 
 
-def to_register(arg):
-    return arg - 32768 if isreg(arg) else arg
+def to_reg(arg):
+    return arg - 32768 if is_reg(arg) else arg
 
 
 def read_instruction(memory, addr):

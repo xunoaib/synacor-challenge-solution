@@ -2,8 +2,8 @@ import ast
 import copy
 from typing import override
 
-from utils import (calculate_location_addr, isreg, load_bytecode,
-                   read_instruction, to_register)
+from utils import (calculate_location_addr, is_reg, load_bytecode,
+                   read_instruction, to_reg)
 
 
 class Registers:
@@ -39,7 +39,7 @@ class BaseVM:
         self.location_addr = calculate_location_addr(self)
 
     def value(self, arg):
-        return self.registers[arg - 32768] if isreg(arg) else arg
+        return self.registers[arg - 32768] if is_reg(arg) else arg
 
     @property
     def location(self):
@@ -118,37 +118,37 @@ class BaseVM:
                     nextpc = b
 
             case 'set':
-                self.registers[to_register(a)] = self.value(b)
+                self.registers[to_reg(a)] = self.value(b)
 
             case 'add':
                 v = (self.value(b) + self.value(c)) % 32768
-                self.registers[to_register(a)] = v
+                self.registers[to_reg(a)] = v
 
             case 'eq':
                 v = int(self.value(b) == self.value(c))
-                self.registers[to_register(a)] = v
+                self.registers[to_reg(a)] = v
 
             case 'push':
                 self.stack.append(self.value(a))
 
             case 'pop':
-                self.registers[to_register(a)] = self.stack.pop()
+                self.registers[to_reg(a)] = self.stack.pop()
 
             case 'gt':
                 v = int(self.value(b) > self.value(c))
-                self.registers[to_register(a)] = v
+                self.registers[to_reg(a)] = v
 
             case 'and':
                 v = int(self.value(b) & self.value(c))
-                self.registers[to_register(a)] = v
+                self.registers[to_reg(a)] = v
 
             case 'or':
                 v = int(self.value(b) | self.value(c))
-                self.registers[to_register(a)] = v
+                self.registers[to_reg(a)] = v
 
             case 'not':
                 v = ~self.value(b) & (2**15 - 1)
-                self.registers[to_register(a)] = v
+                self.registers[to_reg(a)] = v
 
             case 'call':
                 self.stack.append(nextpc)
@@ -156,15 +156,15 @@ class BaseVM:
 
             case 'mult':
                 v = (self.value(b) * self.value(c)) % 32768
-                self.registers[to_register(a)] = v
+                self.registers[to_reg(a)] = v
 
             case 'mod':
                 v = self.value(b) % self.value(c)
-                self.registers[to_register(a)] = v
+                self.registers[to_reg(a)] = v
 
             # read memory at address <b> and write it to <a>
             case 'rmem':
-                self.registers[to_register(a)] = self.memory[self.value(b)]
+                self.registers[to_reg(a)] = self.memory[self.value(b)]
 
             # write the value from <b> into memory at address <a>
             case 'wmem':
@@ -185,7 +185,7 @@ class BaseVM:
                 if not self.input_buffer:
                     return False
 
-                self.registers[to_register(a)] = ord(self.input_buffer.pop(0))
+                self.registers[to_reg(a)] = ord(self.input_buffer.pop(0))
 
             case _:
                 print('unimplemented:', opcode, args)

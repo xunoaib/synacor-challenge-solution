@@ -1,7 +1,7 @@
 import argparse
 import string
 
-from utils import isreg, read_instruction
+from utils import is_reg, read_instruction
 
 
 def format_instruction_plain(opcode, args):
@@ -69,14 +69,14 @@ def disassemble(memory: list[int], addr=0, lines=15):
             curaddr = addr
 
             # combine multiple character outputs into one string
-            if opcode.name == 'out' and not isreg(args[0]):
+            if opcode.name == 'out' and not is_reg(args[0]):
                 outstring = chr(args[0])
                 next_addr = addr + len(opcode)
                 while True:
                     next_opcode, next_args = read_instruction(
                         memory, next_addr
                     )
-                    if next_opcode.name != 'out' or isreg(next_args[0]):
+                    if next_opcode.name != 'out' or is_reg(next_args[0]):
                         break
 
                     outstring += chr(next_args[0])
@@ -103,8 +103,14 @@ def main():
     parser.add_argument('-f', '--file', default='challenge.bin')
     args = parser.parse_args()
 
-    from cpu import BaseVM
-    vm = BaseVM(args.file)
+    from vm import VM
+    vm = VM(args.file)
+
+    # # before decryption
+    # disassemble(vm.memory, 0, len(vm.memory))
+
+    # after decryption
+    vm.run()
     disassemble(vm.memory, 0, len(vm.memory))
 
 
