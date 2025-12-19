@@ -14,8 +14,8 @@ class VMSnapshot(TypedDict):
     stack: list[int]
     registers: list[int]
     pc: int
-    input_buffer: list[str]
-    output_buffer: str
+    input: list[str]
+    output: str
     location_addr: int | None
 
 
@@ -133,8 +133,8 @@ class VM(BaseVM):
             'stack': list(self.stack),
             'registers': list(self.registers._regs),
             'pc': self.pc,
-            'input_buffer': list(self.input_buffer),
-            'output_buffer': self.output_buffer,
+            'input': list(self.input),
+            'output': self.output,
             'location_addr': self.location_addr,
         }
 
@@ -143,8 +143,8 @@ class VM(BaseVM):
         self.stack = list(snapshot['stack'])
         self.registers = Registers(list(snapshot['registers']))
         self.pc = snapshot['pc']
-        self.input_buffer = list(snapshot['input_buffer'])
-        self.output_buffer = snapshot['output_buffer']
+        self.input = list(snapshot['input'])
+        self.output = snapshot['output']
         self.location_addr = snapshot['location_addr']
         return self
 

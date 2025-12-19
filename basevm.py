@@ -87,8 +87,8 @@ class BaseVM:
         self.registers = Registers()
         self.stack: list[int] = []
         self.pc: int = 0
-        self.input_buffer: list[str] = []
-        self.output_buffer: str = ''
+        self.input: list[str] = []
+        self.output: str = ''
 
         if binfile:
             self.memory = load_bytecode(binfile)
@@ -100,13 +100,13 @@ class BaseVM:
         self.registers[to_reg(arg)] = value
 
     def send(self, cmd) -> 'BaseVM':
-        self.input_buffer = list(cmd + '\n')
+        self.input = list(cmd + '\n')
         self.run()
         return self
 
     def read(self):
-        result = self.output_buffer
-        self.output_buffer = ''
+        result = self.output
+        self.output = ''
         return result
 
     def flush(self):
@@ -137,7 +137,7 @@ class BaseVM:
                 return False
 
             case 'out':
-                self.output_buffer += chr(self.value(a))
+                self.output += chr(self.value(a))
 
             case 'jmp':
                 new_pc = a
@@ -203,10 +203,10 @@ class BaseVM:
 
             case 'in':
                 # pause program when input buffer is empty
-                if not self.input_buffer:
+                if not self.input:
                     return False
 
-                self.set_reg(a, ord(self.input_buffer.pop(0)))
+                self.set_reg(a, ord(self.input.pop(0)))
 
             case _:
                 raise NotImplementedError(
