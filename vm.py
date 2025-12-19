@@ -40,10 +40,6 @@ class VM(BaseVM):
         except EOFError:
             pass
 
-    @override
-    def __repr__(self):
-        return f'<{self.__class__.__name__}(pc={self.pc}, loc={self.location})>'
-
     # =================
     # Location Tracking
     # =================
