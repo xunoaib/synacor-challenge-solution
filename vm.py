@@ -1,11 +1,10 @@
-import ast
 import pickle
 import re
 import readline
 from copy import deepcopy
 from itertools import pairwise, zip_longest
 from pathlib import Path
-from typing import Any, override
+from typing import override
 
 from basevm import BaseVM, Registers
 from disassembler import disassemble
@@ -81,19 +80,17 @@ class VM(BaseVM):
     def sendcopy(self, cmd) -> 'VM':
         '''Sends a command to a copy of the current VM, returning the new VM'''
 
-        vm = self.clone()
+        vm = deepcopy(self)
         vm.send(cmd)
         return vm
 
     @override
     def send(self, cmd) -> None:
         if ';' in cmd:
-            # prevent these from interfering with breakpoints?
             for subcmd in cmd.split(';'):
                 self.send(subcmd.strip())
             return
 
-        # intercept special debug commands
         if cmd.startswith('.'):
             try:
                 debug_cmd(self, cmd[1:])
@@ -107,11 +104,6 @@ class VM(BaseVM):
             cmd = newcmd
 
         super().send(cmd)
-
-    def sendread(self, cmd) -> str:
-        self.read()  # discard old output
-        self.send(cmd)  # run command
-        return self.read()  # return new output
 
     # ======================
     # Teleportation Patching
@@ -142,19 +134,29 @@ class VM(BaseVM):
         return pickle.dumps(self.snapshot())
 
     def snapshot(self):
-        return {k: deepcopy(getattr(self, k)) for k in self.SNAPSHOT_ATTRS}
+        return {
+            'memory': list(self.memory),
+            'stack': list(self.stack),
+            'registers': list(self.registers._regs),
+            'pc': self.pc,
+            'input_buffer': list(self.input_buffer),
+            'output_buffer': self.output_buffer,
+            'location_addr': self.location_addr,
+        }
 
     @classmethod
     def from_snapshot(cls, snapshot: dict):
         return cls().apply_snapshot(snapshot)
 
     def apply_snapshot(self, snapshot: dict):
-        for attrib, value in snapshot.items():
-            setattr(self, attrib, value)
+        self.memory = list(snapshot["memory"])
+        self.stack = list(snapshot["stack"])
+        self.registers = Registers(list(snapshot["registers"]))
+        self.pc = snapshot["pc"]
+        self.input_buffer = list(snapshot["input_buffer"])
+        self.output_buffer = snapshot["output_buffer"]
+        self.location_addr = snapshot["location_addr"]
         return self
-
-    def clone(self):
-        return deepcopy(self)
 
 
 def debug_cmd(vm: VM, cmd: str):
@@ -306,7 +308,9 @@ def diff_vms(v1: VM, v2: VM):
     return diff_snapshots(v1.snapshot(), v2.snapshot())
 
 
-def find_code(memory: list[int], code: list[int | None]):
+def find_memory_pattern(memory: list[int], code: list[int | None]):
+    '''Find the given binary pattern in memory, ignoring None's'''
+
     n = len(code)
     return [
         i for i in range(len(memory))
@@ -315,6 +319,7 @@ def find_code(memory: list[int], code: list[int | None]):
 
 
 def find_teleporter_call(memory: list[int]):
+    '''Find and patch the inefficient teleporter call'''
 
     # Code to search for (ignoring special memory addresses)
     code = [
@@ -324,13 +329,15 @@ def find_teleporter_call(memory: list[int]):
         None, 18
     ]
 
-    addrs = find_code(memory, code)
+    addrs = find_memory_pattern(memory, code)
     assert len(addrs) == 1, f'Found multiple teleporter calls ({len(addrs)})'
     return addrs[0]
 
 
 def calculate_location_addr(vm: VM):
-    vm = vm.clone()
+    '''Identifies the memory addresss which identifies the VM's current location'''
+
+    vm = deepcopy(vm)
     vm.run()
     vms = [vm]
 
