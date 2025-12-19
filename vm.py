@@ -227,7 +227,7 @@ def debug_cmd(vm: VM, cmd: str):
         # print memory
         case ['pm', addr, *nbytes]:
             addr = int(addr)
-            nbytes = int(nbytes[0]) if nbytes else 1
+            nbytes = int(nbytes[0] or 1)
             print(vm.memory[addr:addr + nbytes])
 
         case ['reg']:
@@ -235,7 +235,7 @@ def debug_cmd(vm: VM, cmd: str):
 
         case ['ps', addr, *nbytes]:
             addr = int(addr)
-            nbytes = int(nbytes[0]) if nbytes else 1
+            nbytes = int(nbytes[0] or 1)
             print(vm.stack[addr:addr + nbytes])
 
         case ['pinv']:
@@ -299,7 +299,7 @@ def diff_snapshots(snap1: VMSnapshot, snap2: VMSnapshot):
         if v1 == v2:
             continue
 
-        if isinstance(v1, list) or isinstance(v1, Registers):
+        if isinstance(v1, (list, Registers)):
             result[key] = [
                 (idx, subv1, subv2)
                 for idx, (subv1, subv2) in enumerate(zip_longest(v1, v2))
