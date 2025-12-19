@@ -16,12 +16,16 @@ def plot_edges(edges, descs, fname=None, show=False):
     G = nx.MultiDiGraph()
 
     for loc in edges:
-        G.add_node(loc, label=names.get(loc, str(loc)))
+        style = node_style_from_name(names[loc])
+        G.add_node(
+            loc,
+            label=names.get(loc, str(loc)),
+            color=style['color'],
+        )
 
     for src, targets in edges.items():
         for dst, action in targets:
-            if src != dst:
-                G.add_edge(src, dst, label=action)
+            G.add_edge(src, dst, label=action)
 
     pos = nx.spring_layout(G, seed=42, iterations=500, k=1.5)
 
@@ -30,7 +34,7 @@ def plot_edges(edges, descs, fname=None, show=False):
     nx.draw(
         G,
         pos,
-        node_size=400,
+        node_size=200,
         node_color=node_colors,
         edge_color='gray',
         arrows=True,
