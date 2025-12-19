@@ -196,8 +196,9 @@ class BaseVM:
                 self.set_reg(a, ord(self.input_buffer.pop(0)))
 
             case _:
-                print('unimplemented:', opcode, args)
-                return False
+                raise NotImplementedError(
+                    f'Not implemented: {opcode=} {args=}'
+                )
 
         self.pc = new_pc
         return True
