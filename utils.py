@@ -32,9 +32,7 @@ def isreg(arg):
 
 
 def to_register(arg):
-    if isreg(arg):
-        return arg - 32768
-    return arg
+    return arg - 32768 if isreg(arg) else arg
 
 
 def read_instruction(memory, addr):
@@ -128,6 +126,7 @@ def find_teleporter_call(memory: list[int]):
 
 
 def calculate_location_addr(vm: 'EnhancedCPU'):
+    print('Calculating location address')
     vm = vm.clone()
     vm.run()
     vms = [vm]
@@ -137,7 +136,9 @@ def calculate_location_addr(vm: 'EnhancedCPU'):
 
     loc_addr = None
     for a, b in pairwise(vms):
-        mem = diff_vms(a, b)['memory']
+        diff = diff_vms(a, b)
+        assert 'memory' in diff, 'Diff does not contain memory'
+        mem = diff['memory']
         addrs = [d[0] for d in mem]
         loc_addr = addrs[0]  # assume lowest (may be incorrect)
 
