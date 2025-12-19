@@ -56,46 +56,24 @@ def plot_edges(edges, descs, fname=None, show=False):
 
 def node_style_from_name(name: str):
 
-    if 'Dark' in name:
-        return {
-            'color': '#04387b',
-            'group': 'dark_passage',
-        }
-    elif 'Moss cavern' in name:
-        return {
-            'color': '#116622',
-            'group': 'dark_passage',
-        }
-    elif 'Tropical' in name:
-        return {
-            'color': '#11bb22',
-            'group': 'vault',
-        }
-    elif 'Beach' in name:
-        return {
-            'color': '#ffd700',
-            'group': 'vault',
-        }
-    elif 'Vault' in name:
-        return {
-            'color': '#800080',
-            'group': 'vault',
-        }
-    elif 'Twisty' in name:
-        return {
-            'color': '#e74c3c',
-            'group': 'twisty',
-        }
-    elif 'Ruins' in name:
-        return {
-            'color': '#FF8C00',
-            'group': 'ruins',
-        }
-    else:
-        return {
-            'color': '#3498db',
-            'group': 'normal',
-        }
+    colors = {
+        'Dark': '#04387b',
+        'Moss cavern': '#116622',
+        'Tropical': '#11bb22',
+        'Beach': '#ffd700',
+        'Vault': '#800080',
+        'Twisty': '#e74c3c',
+        'Ruins': '#FF8C00',
+    }
+
+    for srch, color in colors.items():
+        if srch in name:
+            return {'color': color, 'group': srch}
+
+    return {
+        'color': '#3498db',
+        'group': 'normal',
+    }
 
 
 def plot_edges_interactive(edges, descs, fname='graph.html'):

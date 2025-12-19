@@ -238,6 +238,9 @@ def solve_all(
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
     plot and plot(edges, descs, 'map5')
 
+    if not plot:
+        print('Note: Skipped writing maps. Pass arg to write maps')
+
 
 def main():
     parser = argparse.ArgumentParser()
