@@ -20,7 +20,7 @@ class Registers:
 
 class BaseVM:
 
-    def __init__(self, fname=None):
+    def __init__(self, binfile=None):
         self.memory = []
         self.registers = Registers()
         self.stack = []
@@ -30,20 +30,16 @@ class BaseVM:
         self.ticks = 0
         self.location_addr: int | None = None
 
-        if fname:
-            self.load_program(fname)
+        if binfile:
+            self.load_program(binfile)
 
-    def load_program(self, fname):
-        self.memory = load_bytecode(fname)
+    def load_program(self, binfile):
+        self.memory = load_bytecode(binfile)
         self.pc = 0
-        print('Calculating location address')
         self.location_addr = calculate_location_addr(self)
 
     def readvalue(self, arg):
         return self.registers[arg - 32768] if isreg(arg) else arg
-
-    def set_register(self, regidx, val):
-        self.registers[regidx] = val
 
     @property
     def location(self):
@@ -77,10 +73,6 @@ class BaseVM:
         result = self.output_buffer
         self.output_buffer = ''
         return result
-
-    def flush(self):
-        self.read()
-        return self
 
     def run(self):
         '''Run until halted or more keyboard input is needed'''
@@ -126,75 +118,53 @@ class BaseVM:
                     nextpc = b
 
             case 'set':
-                self.set_register(
-                    to_register(a),
-                    self.readvalue(b),
-                )
+                self.registers[to_register(a)] = self.readvalue(b)
 
             case 'add':
-                self.set_register(
-                    to_register(a),
-                    (self.readvalue(b) + self.readvalue(c)) % 32768
-                )
+                v = (self.readvalue(b) + self.readvalue(c)) % 32768
+                self.registers[to_register(a)] = v
 
             case 'eq':
-                self.set_register(
-                    to_register(a),
-                    int(self.readvalue(b) == self.readvalue(c))
-                )
+                v = int(self.readvalue(b) == self.readvalue(c))
+                self.registers[to_register(a)] = v
 
             case 'push':
                 self.stack.append(self.readvalue(a))
 
             case 'pop':
-                self.set_register(to_register(a), self.stack.pop())
+                self.registers[to_register(a)] = self.stack.pop()
 
             case 'gt':
-                self.set_register(
-                    to_register(a),
-                    int(self.readvalue(b) > self.readvalue(c)),
-                )
+                v = int(self.readvalue(b) > self.readvalue(c))
+                self.registers[to_register(a)] = v
 
             case 'and':
-                self.set_register(
-                    to_register(a),
-                    int(self.readvalue(b) & self.readvalue(c)),
-                )
+                v = int(self.readvalue(b) & self.readvalue(c))
+                self.registers[to_register(a)] = v
 
             case 'or':
-                self.set_register(
-                    to_register(a),
-                    int(self.readvalue(b) | self.readvalue(c)),
-                )
+                v = int(self.readvalue(b) | self.readvalue(c))
+                self.registers[to_register(a)] = v
 
             case 'not':
-                self.set_register(
-                    to_register(a),
-                    ~self.readvalue(b) & (2**15 - 1),
-                )
+                v = ~self.readvalue(b) & (2**15 - 1)
+                self.registers[to_register(a)] = v
 
             case 'call':
                 self.stack.append(nextpc)
                 nextpc = self.readvalue(a)
 
             case 'mult':
-                self.set_register(
-                    to_register(a),
-                    (self.readvalue(b) * self.readvalue(c)) % 32768
-                )
+                v = (self.readvalue(b) * self.readvalue(c)) % 32768
+                self.registers[to_register(a)] = v
 
             case 'mod':
-                self.set_register(
-                    to_register(a),
-                    (self.readvalue(b) % self.readvalue(c)),
-                )
+                v = self.readvalue(b) % self.readvalue(c)
+                self.registers[to_register(a)] = v
 
             # read memory at address <b> and write it to <a>
             case 'rmem':
-                self.set_register(
-                    to_register(a),
-                    self.memory[self.readvalue(b)],
-                )
+                self.registers[to_register(a)] = self.memory[self.readvalue(b)]
 
             # write the value from <b> into memory at address <a>
             case 'wmem':
@@ -215,10 +185,7 @@ class BaseVM:
                 if not self.input_buffer:
                     return False
 
-                self.set_register(
-                    to_register(a),
-                    ord(self.input_buffer.pop(0)),
-                )
+                self.registers[to_register(a)] = ord(self.input_buffer.pop(0))
 
             case _:
                 print('unimplemented:', opcode, args)
