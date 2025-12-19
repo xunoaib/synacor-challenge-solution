@@ -4,9 +4,8 @@ import re
 from pathlib import Path
 from typing import Any, Callable
 
-import utils
 from plot_maps import plot_edges, plot_edges_interactive
-from vm import VM
+from vm import VM, diff_vms
 
 
 def md5(s: str):
@@ -49,7 +48,7 @@ def identify_item_addrs(vms: list[VM]):
     for vm in vms:
         for item in find_items(vm):
             vm2 = vm.sendcopy('take ' + item)
-            result = utils.diff_vms(vm, vm2)
+            result = diff_vms(vm, vm2)
             addr = next(
                 idx for idx, old, new in result.get('memory', [])
                 if old and not new

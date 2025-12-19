@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 import sys
 from dataclasses import dataclass
 from heapq import heappop, heappush

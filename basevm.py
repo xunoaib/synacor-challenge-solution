@@ -1,9 +1,4 @@
-import ast
-import copy
-from typing import Any, override
-
-from helpers import calculate_location_addr
-from utils import Opcode, is_reg, load_bytecode, read_instruction, to_reg
+from opcodes import Opcode, is_reg, load_bytecode, read_instruction, to_reg
 
 
 class Registers:
@@ -20,57 +15,25 @@ class Registers:
 
 class BaseVM:
 
-    SNAPSHOT_ATTRS = [
-        'memory',
-        'stack',
-        'registers',
-        'pc',
-        'input_buffer',
-        'output_buffer',
-        'location_addr',
-    ]
-
     def __init__(self, binfile=None):
-        self.memory: list[int] = []
+        self.memory: list[int] = load_bytecode(binfile) if binfile else []
         self.registers = Registers()
         self.stack: list[int] = []
         self.pc: int = 0  # program counter
         self.input_buffer: list[str] = []  # keyboard input buffer
         self.output_buffer: str = ''
-        self.ticks = 0
-        self.location_addr: int | None = None
-        self.is_interactive = False
-
-        if binfile:
-            self.load_program(binfile)
-
-    def load_program(self, binfile):
-        self.memory = load_bytecode(binfile)
-        self.pc = 0
-        self.location_addr = calculate_location_addr(self)
 
     def value(self, arg) -> int:
         return self.registers[arg - 32768] if is_reg(arg) else arg
 
-    @property
-    def location(self):
-        assert self.location_addr is not None, 'Location address not set'
-        return self.memory[self.location_addr]
-
-    @location.setter
-    def location(self, value: int):
-        assert self.location_addr is not None, 'Location address not set'
-        self.memory[self.location_addr] = value
-
     def input(self):
         self.send(input('cpu> '))
 
-    def send(self, cmd):
+    def send(self, cmd) -> None:
         self.input_buffer = list(cmd + '\n')
         self.run()
 
     def interactive(self):
-        self.is_interactive = True
         try:
             while True:
                 self.run()
@@ -78,40 +41,31 @@ class BaseVM:
                 self.input()
         except EOFError:
             pass
-        finally:
-            self.is_interactive = False
 
     def read(self):
-        '''Read and remove all data from the output buffer'''
-
+        '''Consumes and return all data from the output buffer'''
         result = self.output_buffer
         self.output_buffer = ''
         return result
 
     def run(self):
-        '''Run until halted or more keyboard input is needed'''
-
+        '''Runs until halted or waiting on input'''
         while self.step():
             pass
 
     def get_next_instruction(self):
         return read_instruction(self.memory, self.pc)
 
-    def step(self):
-        ''' Returns False if halted or waiting for input '''
-
-        opcode, args = self.get_next_instruction()
-        self.ticks += 1
-        return self.execute(opcode, args)
+    def step(self) -> bool:
+        '''Returns False if halted or waiting for input'''
+        return self.execute(*self.get_next_instruction())
 
     def set_reg(self, arg, value):
         self.registers[to_reg(arg)] = value
 
     def execute(self, opcode: Opcode, args: tuple[int, ...]):
-        '''
-        Executes the given instruction, updates the program counter, and
-        returns False if halted or waiting for input
-        '''
+        '''Executes the given instruction and returns False if halted or
+        waiting for input'''
 
         new_pc = self.pc + len(opcode)
         a, b, c = args + (0, ) * (3 - len(args))
@@ -202,35 +156,3 @@ class BaseVM:
 
         self.pc = new_pc
         return True
-
-    def snapshot(self):
-        return {
-            k: copy.deepcopy(getattr(self, k))
-            for k in self.SNAPSHOT_ATTRS
-        }
-
-    def clone(self):
-        return self.__class__.from_snapshot(self.snapshot())
-
-    def load_snapshot(self, state: dict[str, Any]):
-        for attrib in self.SNAPSHOT_ATTRS:
-            setattr(self, attrib, copy.deepcopy(state[attrib]))
-
-    @override
-    def __repr__(self):
-        return f'<{self.__class__.__name__}(pc={self.pc}, loc={self.location})>'
-
-    @staticmethod
-    def read_snapshot_file(fname):
-        with open(fname) as f:
-            return ast.literal_eval(f.read())
-
-    @classmethod
-    def from_snapshot_file(cls, fname):
-        return cls.from_snapshot(cls.read_snapshot_file(fname))
-
-    @classmethod
-    def from_snapshot(cls, snapshot):
-        vm = cls()
-        vm.load_snapshot(snapshot)
-        return vm

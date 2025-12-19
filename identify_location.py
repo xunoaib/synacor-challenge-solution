@@ -1,8 +1,7 @@
 from itertools import pairwise
 
+from helpers import diff_vms
 from vm import VM
-
-import utils
 
 fname = 'challenge-aneurysm.bin'
 
@@ -16,7 +15,7 @@ def identify_location_addr(vm: VM):
 
     loc_addr = None
     for a, b in pairwise(vms):
-        mem = utils.diff_vms(a, b)['memory']
+        mem = diff_vms(a, b)['memory']
         addrs = [d[0] for d in mem]
         loc_addr = addrs[0]  # assume lowest (may be incorrect)
 
@@ -32,7 +31,7 @@ def main():
 
     # v2 = EnhancedCPU('challenge.bin')
     # v2.run()
-    # addr = utils.find_teleporter_call(v2.memory)
+    # addr = opcodes.find_teleporter_call(v2.memory)
     # print(addr)
 
 

@@ -1,12 +1,13 @@
 import ast
+import copy
 import re
 import readline
+from itertools import pairwise, zip_longest
 from pathlib import Path
-from typing import override
+from typing import Any, override
 
 from basevm import BaseVM
 from disassembler import disassemble
-from helpers import diff_vms, find_teleporter_call
 
 ALIASES = {
     'l': 'look',
@@ -26,9 +27,43 @@ SNAPSHOTS_DIR = Path('snapshots')
 
 class VM(BaseVM):
 
+    SNAPSHOT_ATTRS = [
+        'memory',
+        'stack',
+        'registers',
+        'pc',
+        'input_buffer',
+        'output_buffer',
+        'location_addr',
+    ]
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.teleport_call_addr: int | None = None
+        self.location_addr = None
+        self.teleport_call_addr = None
+        self.location_addr = None
+
+    @override
+    def __repr__(self):
+        return f'<{self.__class__.__name__}(pc={self.pc}, loc={self.location})>'
+
+    @property
+    def location(self):
+        if self.location_addr is None:
+            print('===== Calculating Location Address ======')
+            self.location_addr = calculate_location_addr(self)
+
+        assert self.location_addr is not None, 'Location address not set'
+        return self.memory[self.location_addr]
+
+    @location.setter
+    def location(self, value: int):
+        assert self.location_addr is not None, 'Location address not set'
+        self.memory[self.location_addr] = value
+
+    # ==============
+    # Input Handling
+    # ==============
 
     @override
     def input(self):
@@ -55,8 +90,7 @@ class VM(BaseVM):
             return
 
         if newcmd := ALIASES.get(cmd):
-            if self.is_interactive:
-                print(f'# aliased {cmd} => {newcmd}')
+            print(f'# aliased {cmd} => {newcmd}')
             cmd = newcmd
 
         super().send(cmd)
@@ -65,6 +99,10 @@ class VM(BaseVM):
         self.read()  # discard old output
         self.send(cmd)  # run command
         return self.read()  # return new output
+
+    # =================
+    # Patching Teleport
+    # =================
 
     @override
     def execute(self, opcode, args):
@@ -80,12 +118,41 @@ class VM(BaseVM):
     def patch_teleporter_call(self):
         self.teleport_call_addr = find_teleporter_call(self.memory)
 
+    # ============
+    # Snapshotting
+    # ============
+
+    def snapshot(self):
+        return {
+            k: copy.deepcopy(getattr(self, k))
+            for k in self.SNAPSHOT_ATTRS
+        }
+
+    def load_snapshot(self, state: dict[str, Any]):
+        for attrib in self.SNAPSHOT_ATTRS:
+            setattr(self, attrib, copy.deepcopy(state[attrib]))
+
+    def clone(self):
+        return self.__class__.from_snapshot(self.snapshot())
+
+    @staticmethod
+    def read_snapshot_file(fname):
+        with open(fname) as f:
+            return ast.literal_eval(f.read())
+
+    @classmethod
+    def from_snapshot_file(cls, fname):
+        return cls.from_snapshot(cls.read_snapshot_file(fname))
+
+    @classmethod
+    def from_snapshot(cls, snapshot):
+        vm = cls()
+        vm.load_snapshot(snapshot)
+        return vm
+
 
 def debug_cmd(vm: VM, cmd: str):
     match cmd.split():
-        case ['ticks']:
-            print(f'ticks = {vm.ticks}')
-
         case ['dump']:
             print(repr(vm))
 
@@ -207,3 +274,70 @@ def debug_cmd(vm: VM, cmd: str):
 
         case _:
             print('unknown debug command')
+
+
+def diff_snapshots(snap1, snap2):
+    diff_result = {}
+    for key in snap1:
+        v1 = snap1[key]
+        v2 = snap2[key]
+
+        if v1 == v2:
+            continue
+
+        if isinstance(v1, list):
+            diff_result[key] = [
+                (idx, subv1, subv2)
+                for idx, (subv1, subv2) in enumerate(zip_longest(v1, v2))
+                if subv1 != subv2
+            ]
+        else:
+            diff_result[key] = (v1, v2)
+    return diff_result
+
+
+def diff_vms(v1: VM, v2: VM):
+    return diff_snapshots(v1.snapshot(), v2.snapshot())
+
+
+def find_code(memory: list[int], code: list[int | None]):
+    n = len(code)
+    return [
+        i for i in range(len(memory))
+        if all(m == c for m, c in zip(memory[i:i + n], code) if c is not None)
+    ]
+
+
+def find_teleporter_call(memory: list[int]):
+
+    # Code to search for (ignoring special memory addresses)
+    code = [
+        7, 32768, None, 9, 32768, 32769, 1, 18, 7, 32769, None, 9, 32768,
+        32768, 32767, 1, 32769, 32775, 17, None, 18, 2, 32768, 9, 32769, 32769,
+        32767, 17, None, 1, 32769, 32768, 3, 32768, 9, 32768, 32768, 32767, 17,
+        None, 18
+    ]
+
+    addrs = find_code(memory, code)
+    assert len(addrs) == 1, f'Found multiple teleporter calls ({len(addrs)})'
+    return addrs[0]
+
+
+def calculate_location_addr(vm: VM):
+    vm = vm.clone()
+    vm.run()
+    vms = [vm]
+
+    for cmd in ['doorway', 'north', 'north']:
+        vms.append(vms[-1].sendcopy(cmd))
+
+    loc_addr = None
+    for a, b in pairwise(vms):
+        diff = diff_vms(a, b)
+        assert 'memory' in diff, 'Diff does not contain memory'
+        mem = diff['memory']
+        addrs = [d[0] for d in mem]
+        loc_addr = addrs[0]  # assume lowest (may be incorrect)
+
+    assert loc_addr
+    return loc_addr
