@@ -3,10 +3,8 @@ import hashlib
 import re
 from pathlib import Path
 
-import matplotlib.pyplot as plt
-import networkx as nx
-
 import utils
+from plot_maps import plot_edges
 from vm import VM
 
 
@@ -235,53 +233,6 @@ def solve_all(arch_spec_fname, challenge_bin_fname, args_plot: bool):
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
     args_plot and plot_edges(edges, descs, 'map5.png')
-
-
-def plot_edges(edges, descs, fname=None, show=False):
-    names = {}
-    for loc, desc in descs.items():
-        m = re.search(r'== (.*?) ==', desc)
-        names[loc] = m.group(1) if m else str(loc)
-
-    plt.figure(figsize=(8, 6))
-
-    G = nx.DiGraph()
-
-    for loc in edges:
-        G.add_node(loc, label=names.get(loc, str(loc)))
-
-    for src, targets in edges.items():
-        for dst, action in targets:
-            if src != dst:
-                G.add_edge(src, dst, label=action)
-
-    pos = nx.spring_layout(G, seed=42)
-
-    nx.draw(
-        G,
-        pos,
-        node_size=400,
-        node_color='lightblue',
-        edge_color='gray',
-        arrows=True,
-        with_labels=False,
-    )
-
-    node_labels = {n: names.get(n, str(n)) for n in G.nodes}
-    nx.draw_networkx_labels(G, pos, node_labels, font_size=8)
-
-    edge_labels = nx.get_edge_attributes(G, 'label')
-    nx.draw_networkx_edge_labels(G, pos, edge_labels, font_size=7)
-
-    plt.title('Location Graph')
-    plt.axis('off')
-    plt.tight_layout()
-
-    if show:
-        plt.show()
-
-    if fname:
-        plt.savefig(fname, dpi=300)
 
 
 def main():
