@@ -92,6 +92,9 @@ class BaseVM:
         self.ticks += 1
         return self.execute(opcode, args)
 
+    def set_reg(self, arg: int, value: int):
+        self.registers[to_reg(arg)] = value
+
     def execute(self, opcode, args):
         '''
         Executes the given instruction, updates the program counter, and
@@ -122,53 +125,45 @@ class BaseVM:
                     nextpc = b
 
             case 'set':
-                self.registers[to_reg(a)] = self.value(b)
+                self.set_reg(a, self.value(b))
 
             case 'add':
-                v = (self.value(b) + self.value(c)) % 32768
-                self.registers[to_reg(a)] = v
+                self.set_reg(a, (self.value(b) + self.value(c)) % 32768)
 
             case 'eq':
-                v = int(self.value(b) == self.value(c))
-                self.registers[to_reg(a)] = v
+                self.set_reg(a, int(self.value(b) == self.value(c)))
 
             case 'push':
                 self.stack.append(self.value(a))
 
             case 'pop':
-                self.registers[to_reg(a)] = self.stack.pop()
+                self.set_reg(a, self.stack.pop())
 
             case 'gt':
-                v = int(self.value(b) > self.value(c))
-                self.registers[to_reg(a)] = v
+                self.set_reg(a, int(self.value(b) > self.value(c)))
 
             case 'and':
-                v = int(self.value(b) & self.value(c))
-                self.registers[to_reg(a)] = v
+                self.set_reg(a, int(self.value(b) & self.value(c)))
 
             case 'or':
-                v = int(self.value(b) | self.value(c))
-                self.registers[to_reg(a)] = v
+                self.set_reg(a, int(self.value(b) | self.value(c)))
 
             case 'not':
-                v = ~self.value(b) & (2**15 - 1)
-                self.registers[to_reg(a)] = v
+                self.set_reg(a, ~self.value(b) & (2**15 - 1))
 
             case 'call':
                 self.stack.append(nextpc)
                 nextpc = self.value(a)
 
             case 'mult':
-                v = (self.value(b) * self.value(c)) % 32768
-                self.registers[to_reg(a)] = v
+                self.set_reg(a, (self.value(b) * self.value(c)) % 32768)
 
             case 'mod':
-                v = self.value(b) % self.value(c)
-                self.registers[to_reg(a)] = v
+                self.set_reg(a, self.value(b) % self.value(c))
 
             # read memory at address <b> and write it to <a>
             case 'rmem':
-                self.registers[to_reg(a)] = self.memory[self.value(b)]
+                self.set_reg(a, self.memory[self.value(b)])
 
             # write the value from <b> into memory at address <a>
             case 'wmem':
@@ -180,16 +175,12 @@ class BaseVM:
                     return False
                 nextpc = self.stack.pop()
 
-            # read a character from the terminal and write its ascii code to <a>; it can
-            # be assumed that once input starts, it will continue until a newline is
-            # encountered; this means that you can safely read whole lines from the
-            # keyboard and trust that they will be fully read
             case 'in':
                 # pause program when input buffer is empty
                 if not self.input_buffer:
                     return False
 
-                self.registers[to_reg(a)] = ord(self.input_buffer.pop(0))
+                self.set_reg(a, ord(self.input_buffer.pop(0)))
 
             case _:
                 print('unimplemented:', opcode, args)
