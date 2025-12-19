@@ -187,9 +187,8 @@ def debug_cmd(vm: VM, cmd: str):
 
         case ['save', *fname]:
             fname = fname or ['last']
-            directory = SNAPSHOTS_DIR
-            directory.mkdir(exist_ok=True)
-            fname = directory / fname[0]
+            SNAPSHOTS_DIR.mkdir(exist_ok=True)
+            fname = SNAPSHOTS_DIR / fname[0]
             vm.write_snapshot_file(fname)
             print('saved snapshot to', fname)
 
@@ -199,11 +198,10 @@ def debug_cmd(vm: VM, cmd: str):
             print('restored snapshot from', fname)
 
         case ['diff', fname1, *fnames]:
-            directory = SNAPSHOTS_DIR
-            vm1 = vm.from_snapshot_file(directory / fname1)
+            vm1 = vm.from_snapshot_file(SNAPSHOTS_DIR / fname1)
             vm2 = vm
             if fnames:
-                vm2 = vm.from_snapshot_file(directory / fnames[0])
+                vm2 = vm.from_snapshot_file(SNAPSHOTS_DIR / fnames[0])
             diffs = diff_vms(vm1, vm2)
             __import__('pprint').pprint(diffs)
 
