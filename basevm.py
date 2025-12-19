@@ -100,7 +100,7 @@ class BaseVM:
         Executes the given instruction, updates the program counter, and
         returns true if the program has not halted.
         '''
-        nextpc = self.pc + len(opcode)
+        new_pc = self.pc + len(opcode)
         a, b, c = args + (None, ) * (3 - len(args))
 
         match opcode.name:
@@ -114,15 +114,15 @@ class BaseVM:
                 self.output_buffer += chr(self.value(a))
 
             case 'jmp':
-                nextpc = a
+                new_pc = a
 
             case 'jt':
                 if self.value(a) != 0:
-                    nextpc = b
+                    new_pc = b
 
             case 'jf':
                 if self.value(a) == 0:
-                    nextpc = b
+                    new_pc = b
 
             case 'set':
                 self.set_reg(a, self.value(b))
@@ -152,8 +152,8 @@ class BaseVM:
                 self.set_reg(a, ~self.value(b) & (2**15 - 1))
 
             case 'call':
-                self.stack.append(nextpc)
-                nextpc = self.value(a)
+                self.stack.append(new_pc)
+                new_pc = self.value(a)
 
             case 'mult':
                 self.set_reg(a, (self.value(b) * self.value(c)) % 32768)
@@ -173,7 +173,7 @@ class BaseVM:
             case 'ret':
                 if not self.stack:
                     return False
-                nextpc = self.stack.pop()
+                new_pc = self.stack.pop()
 
             case 'in':
                 # pause program when input buffer is empty
@@ -186,7 +186,7 @@ class BaseVM:
                 print('unimplemented:', opcode, args)
                 return False
 
-        self.pc = nextpc
+        self.pc = new_pc
         return True
 
     def snapshot(self):
