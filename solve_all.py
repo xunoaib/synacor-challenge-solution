@@ -2,9 +2,10 @@ import argparse
 import hashlib
 import re
 from pathlib import Path
+from typing import Any, Callable
 
 import utils
-from plot_maps import plot_edges
+from plot_maps import plot_edges, plot_edges_interactive
 from vm import VM
 
 
@@ -118,7 +119,10 @@ def print_code(num: int, code: str):
     print(f'\033[92mCode #{num}: {code}\033[0m: {md5(code)}')
 
 
-def solve_all(arch_spec_fname, challenge_bin_fname, args_plot: bool):
+def solve_all(
+    arch_spec_fname, challenge_bin_fname,
+    plot: Callable[[dict[int, Any], dict[int, Any], str], None] | None
+):
     print(f'\033[93mLoading arch-spec: {arch_spec_fname}\033[0m')
     with open(arch_spec_fname) as f:
         data = f.read()
@@ -142,7 +146,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname, args_plot: bool):
     print_code(3, m3.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, {})
-    args_plot and plot_edges(edges, descs, 'map0.png')
+    plot and plot(edges, descs, 'map0')
 
     vm.send('use can')
     vm.send('use lantern')
@@ -158,7 +162,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname, args_plot: bool):
     print('\033[93m>> Solving twisty maze\033[0m')
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    args_plot and plot_edges(edges, descs, 'map1.png')
+    plot and plot(edges, descs, 'map1')
 
     code5 = next(
         (
@@ -184,7 +188,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname, args_plot: bool):
     vm.send('use corroded coin')
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    args_plot and plot_edges(edges, descs, 'map2.png')
+    plot and plot(edges, descs, 'map2')
 
     print('\033[93m>> Using teleporter\033[0m')
     vm.send('use teleporter')
@@ -195,7 +199,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname, args_plot: bool):
     print_code(6, m.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    args_plot and plot_edges(edges, descs, 'map3.png')
+    plot and plot(edges, descs, 'map3')
 
     print('\033[93m>> Using teleporter again\033[0m')
     vm.patch_teleporter_call()
@@ -210,7 +214,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname, args_plot: bool):
     print_code(7, m.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    args_plot and plot_edges(edges, descs, 'map4.png')
+    plot and plot(edges, descs, 'map4')
 
     print('\033[93m>> Solving antechamber\033[0m')
     vm.location = next(
@@ -232,7 +236,7 @@ def solve_all(arch_spec_fname, challenge_bin_fname, args_plot: bool):
     print_code(8, reflect(m.group(1)))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    args_plot and plot_edges(edges, descs, 'map5.png')
+    plot and plot(edges, descs, 'map5')
 
 
 def main():
@@ -261,7 +265,21 @@ def main():
     archfile = Path(args.dir) / args.archfile
     binfile = Path(args.dir) / args.binfile
 
-    solve_all(archfile, binfile, args.plot)
+    plot_funcs = {
+        'png':
+        lambda edges, descs, name:
+        plot_edges(edges, descs, fname=f'{name}.png', show=False),
+        'html':
+        lambda edges, descs, name:
+        plot_edges_interactive(edges, descs, fname=f'{name}.html'),
+    }
+
+    method = 'png'
+    method = 'html'
+
+    plot = plot_funcs.get(method, None)
+
+    solve_all(archfile, binfile, plot)
 
 
 if __name__ == '__main__':
