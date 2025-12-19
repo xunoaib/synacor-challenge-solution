@@ -3,9 +3,6 @@ import string
 from dataclasses import dataclass
 from itertools import pairwise, zip_longest
 
-from rich.console import Console
-from rich.table import Table
-
 
 @dataclass
 class Opcode:
@@ -79,27 +76,6 @@ def diff_snapshots(snap1, snap2):
 
 def diff_vms(v1: 'VM', v2: 'VM'):
     return diff_snapshots(v1.snapshot(), v2.snapshot())
-
-
-def rprint_diff(diff):
-    console = Console()
-    for section, vals in diff.items():
-        table = diff_table(vals, section.capitalize())
-        console.print(table)
-
-
-def diff_table(section_data, title):
-    table = Table(title=title)
-    for col in ('Loc', 'Old', 'New'):
-        table.add_column(col, justify='right')
-
-    for vals in section_data:
-        vals = list(vals)
-        for i, v in enumerate(vals):
-            if v < 256 and chr(v) in string.printable:
-                vals[i] = f"'[bold green]{chr(v)}[/bold green]' {v}"
-        table.add_row(*map(str, vals))
-    return table
 
 
 def find_code(memory: list[int], code: list[int | None]):
