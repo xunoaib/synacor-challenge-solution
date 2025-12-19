@@ -6,7 +6,7 @@ from itertools import pairwise, zip_longest
 from pathlib import Path
 from typing import Any, override
 
-from basevm import BaseVM
+from basevm import BaseVM, Registers
 from disassembler import disassemble
 
 ALIASES = {
@@ -48,7 +48,7 @@ class VM(BaseVM):
             while True:
                 self.run()
                 print(self.read(), end='')
-                self.send(input('cpu> '))
+                self.send(input('\033[93;1mdbg>\033[0m '))
         except EOFError:
             pass
 
@@ -74,10 +74,6 @@ class VM(BaseVM):
     # Input Handling
     # ==============
 
-    @override
-    def input(self):
-        self.send(input('\033[93;1mdbg>\033[0m '))
-
     def sendcopy(self, cmd) -> 'VM':
         '''Sends a command to a copy of the current VM, returning the new VM'''
 
@@ -95,7 +91,11 @@ class VM(BaseVM):
 
         # intercept special debug commands
         if cmd.startswith('.'):
-            debug_cmd(self, cmd[1:])
+            try:
+                debug_cmd(self, cmd[1:])
+            except Exception as exc:
+                print('Error:', exc)
+                raise exc
             return
 
         if newcmd := ALIASES.get(cmd):
@@ -132,14 +132,14 @@ class VM(BaseVM):
     # ============
 
     def snapshot(self):
-        return {
-            k: copy.deepcopy(getattr(self, k))
-            for k in self.SNAPSHOT_ATTRS
-        }
+        return {k: repr(getattr(self, k)) for k in self.SNAPSHOT_ATTRS}
 
     def load_snapshot(self, state: dict[str, Any]):
         for attrib in self.SNAPSHOT_ATTRS:
-            setattr(self, attrib, copy.deepcopy(state[attrib]))
+            data = ast.literal_eval(state[attrib])
+            if attrib == 'registers':
+                data = Registers(data)
+            setattr(self, attrib, data)
 
     def clone(self):
         return self.__class__.from_snapshot(self.snapshot())
@@ -190,7 +190,7 @@ def debug_cmd(vm: VM, cmd: str):
             with open(fname) as f:
                 snapshot = ast.literal_eval(f.read())
             vm.load_snapshot(snapshot)
-            print('restored snapshot from ', fname)
+            print('restored snapshot from', fname)
 
         case ['diff', fname1, *fnames]:
             directory = SNAPSHOTS_DIR

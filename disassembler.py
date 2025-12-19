@@ -1,7 +1,8 @@
 import argparse
 import string
 
-from opcodes import is_reg, read_instruction
+# from opcodes import is_reg, read_instruction
+from basevm import is_reg, read_instruction
 
 
 def format_instruction_plain(opcode, args):

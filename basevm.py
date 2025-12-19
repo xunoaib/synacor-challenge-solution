@@ -1,6 +1,49 @@
+import re
+from dataclasses import dataclass
 from itertools import batched
+from typing import override
 
-from opcodes import Opcode, is_reg, read_instruction, to_reg
+
+@dataclass
+class Opcode:
+    name: str
+    id: int
+    nargs: int
+
+    def __len__(self):
+        return 1 + self.nargs
+
+
+def is_reg(arg: int):
+    return arg >= 32768
+
+
+def to_reg(arg: int):
+    return arg - 32768 if is_reg(arg) else arg
+
+
+def read_instruction(memory: list[int], addr: int):
+    opid = memory[addr]
+    opcode = OPCODES[opid]
+    args = tuple(memory[addr + 1:addr + 1 + opcode.nargs])
+    return opcode, args
+
+
+def parse_opcodes(arch_spec='arch-spec') -> dict[int, Opcode]:
+    '''Parse opcodes and their expected arguments from the arch-spec document'''
+
+    with open(arch_spec) as f:
+        data = f.read()
+
+    opcodes = {}
+    for name, opid, args in re.findall(r'(.*): (\d+)(.*?)\n', data):
+        nargs = len(args.strip().split())
+        opid = int(opid)
+        opcodes[opid] = Opcode(name, opid, nargs)
+    return opcodes
+
+
+OPCODES = parse_opcodes()
 
 
 def load_bytecode(binfile):
@@ -10,14 +53,18 @@ def load_bytecode(binfile):
 
 class Registers:
 
-    def __init__(self):
-        self._regs = [0] * 8
+    def __init__(self, regs=None):
+        self._regs = regs if regs else [0] * 8
 
     def __getitem__(self, idx) -> int:
         return self._regs[idx]
 
     def __setitem__(self, idx, val):
         self._regs[idx] = val
+
+    @override
+    def __repr__(self) -> str:
+        return repr(self._regs)
 
 
 class BaseVM:
