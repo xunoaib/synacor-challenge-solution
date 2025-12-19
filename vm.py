@@ -127,6 +127,16 @@ class VM(BaseVM):
             'location_addr': self.location_addr,
         }
 
+    def apply_snapshot(self, snapshot: dict):
+        self.memory = list(snapshot['memory'])
+        self.stack = list(snapshot['stack'])
+        self.registers = Registers(list(snapshot['registers']))
+        self.pc = snapshot['pc']
+        self.input_buffer = list(snapshot['input_buffer'])
+        self.output_buffer = snapshot['output_buffer']
+        self.location_addr = snapshot['location_addr']
+        return self
+
     @classmethod
     def from_snapshot(cls, snapshot: dict):
         return cls().apply_snapshot(snapshot)
@@ -146,16 +156,6 @@ class VM(BaseVM):
 
     def apply_snapshot_file(self, fname: str | Path):
         return self.apply_snapshot(self.snapshot_from_file(fname))
-
-    def apply_snapshot(self, snapshot: dict):
-        self.memory = list(snapshot['memory'])
-        self.stack = list(snapshot['stack'])
-        self.registers = Registers(list(snapshot['registers']))
-        self.pc = snapshot['pc']
-        self.input_buffer = list(snapshot['input_buffer'])
-        self.output_buffer = snapshot['output_buffer']
-        self.location_addr = snapshot['location_addr']
-        return self
 
 
 def debug_cmd(vm: VM, cmd: str):
