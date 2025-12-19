@@ -27,16 +27,6 @@ SNAPSHOTS_DIR = Path('snapshots')
 
 class VM(BaseVM):
 
-    SNAPSHOT_ATTRS = [
-        'memory',
-        'stack',
-        'registers',
-        'pc',
-        'input_buffer',
-        'output_buffer',
-        'location_addr',
-    ]
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.location_addr = None
@@ -80,30 +70,28 @@ class VM(BaseVM):
     def sendcopy(self, cmd) -> 'VM':
         '''Sends a command to a copy of the current VM, returning the new VM'''
 
-        vm = deepcopy(self)
-        vm.send(cmd)
-        return vm
+        return deepcopy(self).send(cmd)
 
     @override
-    def send(self, cmd) -> None:
+    def send(self, cmd) -> 'VM':
         if ';' in cmd:
             for subcmd in cmd.split(';'):
                 self.send(subcmd.strip())
-            return
+            return self
 
         if cmd.startswith('.'):
             try:
                 debug_cmd(self, cmd[1:])
             except Exception as exc:
                 print('Error:', exc)
-                raise exc
-            return
+            return self
 
         if newcmd := ALIASES.get(cmd):
             print(f'# aliased {cmd} => {newcmd}')
             cmd = newcmd
 
         super().send(cmd)
+        return self
 
     # ======================
     # Teleportation Patching
@@ -127,9 +115,6 @@ class VM(BaseVM):
     # Snapshotting
     # ============
 
-    def deserialize(self, data: bytes):
-        return self.from_snapshot(pickle.loads(data))
-
     def serialize(self) -> bytes:
         return pickle.dumps(self.snapshot())
 
@@ -148,14 +133,19 @@ class VM(BaseVM):
     def from_snapshot(cls, snapshot: dict):
         return cls().apply_snapshot(snapshot)
 
+    @classmethod
+    def from_snapshot_file(cls, fname: str | Path):
+        with open(fname, 'rb') as f:
+            return cls.from_snapshot(pickle.load(f))
+
     def apply_snapshot(self, snapshot: dict):
-        self.memory = list(snapshot["memory"])
-        self.stack = list(snapshot["stack"])
-        self.registers = Registers(list(snapshot["registers"]))
-        self.pc = snapshot["pc"]
-        self.input_buffer = list(snapshot["input_buffer"])
-        self.output_buffer = snapshot["output_buffer"]
-        self.location_addr = snapshot["location_addr"]
+        self.memory = list(snapshot['memory'])
+        self.stack = list(snapshot['stack'])
+        self.registers = Registers(list(snapshot['registers']))
+        self.pc = snapshot['pc']
+        self.input_buffer = list(snapshot['input_buffer'])
+        self.output_buffer = snapshot['output_buffer']
+        self.location_addr = snapshot['location_addr']
         return self
 
 

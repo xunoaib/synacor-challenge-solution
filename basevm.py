@@ -93,9 +93,10 @@ class BaseVM:
     def set_reg(self, arg, value):
         self.registers[to_reg(arg)] = value
 
-    def send(self, cmd) -> None:
+    def send(self, cmd) -> 'BaseVM':
         self.input_buffer = list(cmd + '\n')
         self.run()
+        return self
 
     def read(self):
         result = self.output_buffer
@@ -105,6 +106,7 @@ class BaseVM:
     def run(self):
         while self.step():
             pass
+        return self
 
     def step(self) -> bool:
         '''Returns False if halted or waiting for input'''
