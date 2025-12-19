@@ -1,7 +1,8 @@
 import ast
-import copy
+import pickle
 import re
 import readline
+from copy import deepcopy
 from itertools import pairwise, zip_longest
 from pathlib import Path
 from typing import Any, override
@@ -41,7 +42,6 @@ class VM(BaseVM):
         super().__init__(*args, **kwargs)
         self.location_addr = None
         self.teleport_call_addr = None
-        self.location_addr = None
 
     def interactive(self):
         try:
@@ -55,6 +55,10 @@ class VM(BaseVM):
     @override
     def __repr__(self):
         return f'<{self.__class__.__name__}(pc={self.pc}, loc={self.location})>'
+
+    # =================
+    # Location Tracking
+    # =================
 
     @property
     def location(self):
@@ -109,9 +113,9 @@ class VM(BaseVM):
         self.send(cmd)  # run command
         return self.read()  # return new output
 
-    # =================
-    # Patching Teleport
-    # =================
+    # ======================
+    # Teleportation Patching
+    # ======================
 
     @override
     def execute(self, opcode, args):
@@ -131,33 +135,27 @@ class VM(BaseVM):
     # Snapshotting
     # ============
 
-    def snapshot(self):
-        return {k: repr(getattr(self, k)) for k in self.SNAPSHOT_ATTRS}
+    def deserialize(self, data: bytes):
+        return self.from_snapshot(pickle.loads(data))
 
-    def load_snapshot(self, state: dict[str, Any]):
-        for attrib in self.SNAPSHOT_ATTRS:
-            data = ast.literal_eval(state[attrib])
-            if attrib == 'registers':
-                data = Registers(data)
-            setattr(self, attrib, data)
+    def serialize(self) -> bytes:
+        return pickle.dumps(self.snapshot())
+
+    def snapshot(self):
+        return {k: deepcopy(getattr(self, k)) for k in self.SNAPSHOT_ATTRS}
+
+    @classmethod
+    def from_snapshot(cls, snapshot: dict):
+        self = cls()
+        self.apply_snapshot(snapshot)
+        return self
+
+    def apply_snapshot(self, snapshot: dict):
+        for attrib, value in snapshot.items():
+            setattr(self, attrib, value)
 
     def clone(self):
-        return self.__class__.from_snapshot(self.snapshot())
-
-    @staticmethod
-    def read_snapshot_file(fname):
-        with open(fname) as f:
-            return ast.literal_eval(f.read())
-
-    @classmethod
-    def from_snapshot_file(cls, fname):
-        return cls.from_snapshot(cls.read_snapshot_file(fname))
-
-    @classmethod
-    def from_snapshot(cls, snapshot):
-        vm = cls()
-        vm.load_snapshot(snapshot)
-        return vm
+        return deepcopy(self)
 
 
 def debug_cmd(vm: VM, cmd: str):
@@ -181,15 +179,15 @@ def debug_cmd(vm: VM, cmd: str):
             directory = SNAPSHOTS_DIR
             directory.mkdir(exist_ok=True)
             fname = directory / fname[0]
-            with open(fname, 'w') as f:
-                f.write(str(vm.snapshot()))
+            with open(fname, 'wb') as f:
+                f.write(vm.serialize())
             print('saved snapshot to', fname)
 
         case ['load', fname]:
             fname = SNAPSHOTS_DIR / fname
-            with open(fname) as f:
-                snapshot = ast.literal_eval(f.read())
-            vm.load_snapshot(snapshot)
+            with open(fname, 'rb') as f:
+                data = f.read()
+                vm.apply_snapshot(pickle.loads(data))
             print('restored snapshot from', fname)
 
         case ['diff', fname1, *fnames]:
@@ -285,7 +283,7 @@ def debug_cmd(vm: VM, cmd: str):
             print('unknown debug command')
 
 
-def diff_snapshots(snap1, snap2):
+def diff_snapshots(snap1: dict, snap2: dict):
     diff_result = {}
     for key in snap1:
         v1 = snap1[key]

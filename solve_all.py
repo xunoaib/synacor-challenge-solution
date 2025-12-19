@@ -261,7 +261,6 @@ def main():
     parser.add_argument(
         '-p',
         '--map-format',
-        default='html',
         choices=['png', 'html'],
     )
     args = parser.parse_args()

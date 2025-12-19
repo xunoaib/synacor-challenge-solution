@@ -64,7 +64,14 @@ class Registers:
 
     @override
     def __repr__(self) -> str:
-        return repr(self._regs)
+        return f'{self.__class__.__name__}({self._regs})'
+
+    @override
+    def __eq__(self, other):
+        assert isinstance(
+            other, self.__class__
+        ), f'Unexpected class: {type(other)}'
+        return self._regs == other._regs
 
 
 class BaseVM:
