@@ -332,24 +332,14 @@ def find_teleporter_call(memory: list[int]):
     return addrs[0]
 
 
-def calculate_location_addr(vm: VM):
+def calculate_location_addr(vm: VM) -> int:
     '''Identify the memory addresss which stores the VM's current location'''
 
-    vms = [vm.clone().run()]
+    vm1 = vm.clone().run()
+    vm2 = vm.clone().sendcopy('doorway')
+    diff = diff_vms(vm1, vm2)
 
-    # Simulate some movement
-    for cmd in ['doorway', 'north', 'north']:
-        vms.append(vms[-1].sendcopy(cmd))
+    assert 'memory' in diff, 'Diff does not contain memory'
 
-    # Diff the VM's memory
-    loc_addr = None
-    for a, b in pairwise(vms):
-        diff = diff_vms(a, b)
-        assert 'memory' in diff, 'Diff does not contain memory'
-        mem = diff['memory']
-        addrs = [d[0] for d in mem]
-        # assume lowest (generally true but could be incorrect)
-        loc_addr = addrs[0]
-
-    assert loc_addr
-    return loc_addr
+    # assume lowest address (generally true but could be incorrect)
+    return min(d[0] for d in diff['memory'])
