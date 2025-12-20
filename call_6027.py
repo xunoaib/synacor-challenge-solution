@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+import argparse
 import time
 from multiprocessing import Event, Pool
 
@@ -33,7 +33,8 @@ def f(r0, r1, r7):
 solution_found = Event()
 
 
-def worker(start, end):
+def worker(start, end, exit_early=True):
+    solution = None
     for r7 in range(start, end):
         f3 = [0] * 32768
         f3[0] = (
@@ -45,10 +46,12 @@ def worker(start, end):
         val = f3[f3[r7]]
         if val == 6:
             solution_found.set()
-            return r7
+            solution = r7
 
-        if solution_found.is_set():
-            return
+        if exit_early and solution_found.is_set():
+            break
+
+    return solution
 
 
 def worker_callback(result):
@@ -56,10 +59,9 @@ def worker_callback(result):
         print(f'Solution: r7 = {result}')
 
 
-def main_multi():
+def main_multi(processes: int, exit_early: bool):
     '''Multi-processing method which takes ~18s on my hardware'''
 
-    processes = 8
     chunksize = 32768 // processes
     results = []
 
@@ -67,7 +69,7 @@ def main_multi():
 
     with Pool(processes, initargs=(solution_found, )) as pool:
         for start in range(0, 32768, chunksize):
-            args = (start, min(start + chunksize + 1, 32768))
+            args = (start, min(start + chunksize + 1, 32768), exit_early)
             result = pool.apply_async(
                 worker, args=args, callback=worker_callback
             )
@@ -108,9 +110,27 @@ def main_single():
             break
 
 
+def main():
+
+    parser = argparse.ArgumentParser()
+    group = parser.add_mutually_exclusive_group()
+    group.add_argument('-s', '--single', action='store_true')
+    group.add_argument('-m', '--multi', action='store_true')
+    parser.add_argument('-p', '--processes', type=int, default=8)
+    parser.add_argument('-nx', '--dont-exit-early', action='store_true')
+    args = parser.parse_args()
+
+    if args.single:
+        main_single()
+    else:
+        main_multi(
+            processes=args.processes,
+            exit_early=not args.dont_exit_early,
+        )
+
+
 if __name__ == '__main__':
     try:
-        main_multi()
-        # main_single()
+        main()
     except KeyboardInterrupt:
-        pass
+        print('interrupted')
