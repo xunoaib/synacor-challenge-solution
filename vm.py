@@ -1,7 +1,8 @@
 import ast
+import bdb
 import re
 import readline
-from itertools import pairwise, zip_longest
+from itertools import zip_longest
 from pathlib import Path
 from typing import TypedDict, override
 
@@ -171,7 +172,10 @@ class VM(BaseVM):
 def debug_cmd(vm: VM, cmd: str):
     match cmd.split():
         case ['bp' | 'breakpoint']:
-            breakpoint()
+            try:
+                breakpoint()
+            except bdb.BdbQuit:
+                pass
 
         case ['dump', fname]:
             if Path(fname).exists():
@@ -198,8 +202,7 @@ def debug_cmd(vm: VM, cmd: str):
             vm2 = vm
             if fnames:
                 vm2 = vm.from_snapshot_file(SNAPSHOTS_DIR / fnames[0])
-            diffs = diff_vms(vm1, vm2)
-            __import__('pprint').pprint(diffs)
+            __import__('pprint').pprint(diff_vms(vm1, vm2))
 
         case ['giveall']:
             # give all known items (note: these addrs vary between binaries)
