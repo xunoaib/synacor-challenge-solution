@@ -8,17 +8,6 @@ from typing import TypedDict, override
 from basevm import BaseVM, Registers
 from disassembler import disassemble
 
-
-class VMSnapshot(TypedDict):
-    memory: list[int]
-    stack: list[int]
-    registers: list[int]
-    pc: int
-    input: list[str]
-    output: str
-    location_addr: int | None
-
-
 ALIASES = {
     'l': 'look',
     'n': 'north',
@@ -33,6 +22,16 @@ ALIASES = {
 }
 
 SNAPSHOTS_DIR = Path('snapshots')
+
+
+class VMSnapshot(TypedDict):
+    memory: list[int]
+    stack: list[int]
+    registers: list[int]
+    pc: int
+    input: list[str]
+    output: str
+    location_addr: int | None
 
 
 class VM(BaseVM):
@@ -171,8 +170,8 @@ class VM(BaseVM):
 
 def debug_cmd(vm: VM, cmd: str):
     match cmd.split():
-        case ['dump']:
-            print(repr(vm))
+        case ['bp' | 'breakpoint']:
+            breakpoint()
 
         case ['dump', fname]:
             if Path(fname).exists():
@@ -181,9 +180,6 @@ def debug_cmd(vm: VM, cmd: str):
             with open(fname, 'w') as f:
                 f.write(repr(vm))
             print('saved to', fname)
-
-        case ['pc']:
-            print('pc =', vm.pc)
 
         case ['save', *fname]:
             fname = fname or ['last']
@@ -222,7 +218,7 @@ def debug_cmd(vm: VM, cmd: str):
         case ['wr', addr, val]:
             vm.registers[int(addr)] = int(val)
 
-        # print memory
+        # print nbytes of memory at addr
         case ['pm', addr, *nbytes]:
             addr = int(addr)
             nbytes = int(nbytes[0] or 1)
@@ -271,6 +267,7 @@ def debug_cmd(vm: VM, cmd: str):
         case ['macro', fname]:
             fname = Path('macros') / fname
             print('running macros from:', fname)
+
             with open(fname) as f:
                 commands = re.split(r'[\n;]+', f.read().strip())
 
@@ -280,9 +277,6 @@ def debug_cmd(vm: VM, cmd: str):
                 )
                 vm.send(cmd)
                 print(vm.read())
-
-        case ['quit' | 'q']:
-            exit()
 
         case _:
             print('unknown debug command')
