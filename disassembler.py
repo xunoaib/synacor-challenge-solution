@@ -1,8 +1,10 @@
 import argparse
 import string
+from typing import Callable
 
-# from opcodes import is_reg, read_instruction
-from basevm import is_reg, read_instruction
+from basevm import OPCODES, Opcode, is_reg, read_instruction
+
+InstructionFormatter = Callable[[Opcode, tuple[int, ...] | tuple[str]], str]
 
 
 def format_instruction_plain(opcode, args):
@@ -10,7 +12,7 @@ def format_instruction_plain(opcode, args):
     if opcode.name == 'out' and isinstance(args[0], str):
         return opcode.name + ' ' + repr(args[0])
 
-    argregs = [f'r{v-32768}' if v >= 32768 else v for v in args]
+    argregs = [f'r{v-32768}' if is_reg(v) else v for v in args]
     if opcode.name == 'out' and isinstance(argregs[0], int):
         argregs = repr(chr(args[0]))
     elif not args:
@@ -26,7 +28,7 @@ def format_instruction_sensible(opcode, args):
     if opcode.name == 'out' and isinstance(args[0], str):
         return opcode.name + ' ' + repr(args[0])
 
-    argregs = [f'r{v-32768}' if v >= 32768 else v for v in args]
+    argregs = [f'r{v-32768}' if is_reg(v) else v for v in args]
     if opcode.name == 'out' and isinstance(argregs[0], int):
         argregs = repr(chr(args[0]))
     elif not args:
@@ -59,11 +61,27 @@ def format_instruction_sensible(opcode, args):
     return opcode.name + ' ' + argregs
 
 
-format_instruction = format_instruction_sensible
-format_instruction = format_instruction_plain
+DEFAULT_FORMATTER = format_instruction_plain
 
 
-def disassemble(memory: list[int], addr=0, lines=15):
+def disassemble(
+    memory: list[int],
+    addr=0,
+    lines: int = 0,
+    format_instruction: InstructionFormatter = DEFAULT_FORMATTER,
+):
+    for line in disassemble_lines(memory, addr, lines, format_instruction):
+        print(line)
+
+
+def disassemble_lines(
+    memory: list[int],
+    addr=0,
+    lines: int = 0,
+    format_instruction: InstructionFormatter = DEFAULT_FORMATTER,
+):
+    results = []
+    lines = lines or len(memory)
     while addr < len(memory) and lines > 0:
         try:
             opcode, args = read_instruction(memory, addr)
@@ -85,7 +103,9 @@ def disassemble(memory: list[int], addr=0, lines=15):
                     next_addr += len(opcode)
                 args = (outstring, )
 
-            print(curaddr, '', format_instruction(opcode, args))
+            results.append(
+                f"{curaddr:>05x}  {format_instruction(opcode, args)}"
+            )
             addr += len(opcode)
             lines -= 1
 
@@ -95,7 +115,21 @@ def disassemble(memory: list[int], addr=0, lines=15):
                 val = repr(chr(val)) + f' [{val}]'
             else:
                 val = f'[{val}]'
-            print(addr, ' err %s' % val)
+            results.append(f'{addr:>05x}  err {val}')
+            addr += 1
+
+    return results
+
+
+def iter_instructions(memory: list[int]):
+    addr = 0
+    while addr < len(memory):
+        if memory[addr] in OPCODES:
+            opcode, args = read_instruction(memory, addr)
+            yield addr, opcode, args
+            addr += len(opcode)
+        else:
+            yield addr, None, memory[addr]
             addr += 1
 
 
@@ -105,14 +139,9 @@ def main():
     args = parser.parse_args()
 
     from vm import VM
-    vm = VM(args.file)
+    vm = VM(args.file).run()
 
-    # # before decryption
-    # disassemble(vm.memory, 0, len(vm.memory))
-
-    # after decryption
-    vm.run()
-    disassemble(vm.memory, 0, len(vm.memory))
+    disassemble(vm.memory)
 
 
 if __name__ == '__main__':

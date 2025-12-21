@@ -23,8 +23,7 @@ def to_reg(arg: int):
 
 
 def read_instruction(memory: list[int], addr: int):
-    opid = memory[addr]
-    opcode = OPCODES[opid]
+    opcode = OPCODES[memory[addr]]
     args = tuple(memory[addr + 1:addr + 1 + opcode.nargs])
     return opcode, args
 

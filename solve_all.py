@@ -131,6 +131,8 @@ def solve_all(
     if not plot:
         print('\033[95mNOTE: Skipped writing maps to HTML/PNG.\n\033[0m')
 
+    vm.interactive()
+
 
 def find_and_collect_all(vm: VM, known_locs: dict[int, VM]):
     edges, descs, vms, item_addrs = find_all_states(vm)
