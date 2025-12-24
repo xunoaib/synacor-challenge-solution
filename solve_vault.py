@@ -23,7 +23,7 @@ DIR_TO_CMD = {
 @dataclass(frozen=True, order=True)
 class State:
     pos: tuple[int, int]
-    value: int = 0
+    value: int | str = 0
     op: str | None = '+'
 
 
@@ -33,6 +33,7 @@ def move_state(state: State, newpos: tuple[int, int]):
 
     if isinstance(gridch, int):
         newop = None
+        assert isinstance(state.value, int)
         match state.op:
             case '+':
                 newvalue = state.value + gridch
