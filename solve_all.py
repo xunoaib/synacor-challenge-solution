@@ -11,7 +11,7 @@ from vm import VM, diff_vms
 def solve_all(
     arch_spec_fname,
     challenge_bin_fname,
-    plot: Callable[[dict[int, Any], dict[int, Any], str], None] | None,
+    plot: Callable[[dict[int, Any], dict[int, Any], str], None],
 ):
     print(f'\033[93mLoading arch-spec: {arch_spec_fname}\033[0m')
     with open(arch_spec_fname) as f:
@@ -36,7 +36,7 @@ def solve_all(
     yield print_code(3, m3.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, {})
-    plot and plot(edges, descs, 'map0')
+    plot(edges, descs, 'map0')
 
     vm.send('use can')
     vm.send('use lantern')
@@ -52,7 +52,7 @@ def solve_all(
     print('\033[93m>> Solving twisty maze\033[0m')
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    plot and plot(edges, descs, 'map1')
+    plot(edges, descs, 'map1')
 
     code5 = next(
         (
@@ -78,7 +78,7 @@ def solve_all(
     vm.send('use corroded coin')
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    plot and plot(edges, descs, 'map2')
+    plot(edges, descs, 'map2')
 
     print('\033[93m>> Using teleporter\033[0m')
     vm.send('use teleporter')
@@ -89,7 +89,7 @@ def solve_all(
     yield print_code(6, m.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    plot and plot(edges, descs, 'map3')
+    plot(edges, descs, 'map3')
 
     print('\033[93m>> Using teleporter again\033[0m')
     vm.patch_teleporter_call()
@@ -104,7 +104,7 @@ def solve_all(
     yield print_code(7, m.group(1))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    plot and plot(edges, descs, 'map4')
+    plot(edges, descs, 'map4')
 
     print('\033[93m>> Solving antechamber\033[0m')
     vm.location = next(
@@ -289,7 +289,7 @@ def main():
         ),
     }
 
-    plot = plot_funcs.get(args.map_format, None)
+    plot = plot_funcs.get(args.map_format, lambda *args: None)
 
     codes = list(solve_all(archfile, binfile, plot))
 
@@ -308,6 +308,9 @@ def main():
         md5code = md5(code)
         success = '✅' if hash == md5code else '❌'
         print(f'{success} Code #{i}: md5({code}) == {md5code} ?= {hash}')
+
+    if args.map_format is None:
+        print('\033[95mNOTE: Skipped writing maps to HTML/PNG.\n\033[0m')
 
 
 if __name__ == '__main__':
