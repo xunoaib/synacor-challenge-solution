@@ -49,11 +49,8 @@ class VM(BaseVM):
 
     @property
     def location(self):
-        # FIXME: Allow this func to called from anywhere (func expects starting loc)
         if self.location_addr is None:
             print('===== Calculating Location Address ======')
-            x = self.clone().flush().sendcopy('look').read()
-            assert 'Definitely no treasure within!' in x, 'Unexpected location for location address calculation'
             self.location_addr = calculate_location_addr(self)
 
         assert self.location_addr is not None, 'Location address not set'
@@ -336,6 +333,10 @@ def find_teleporter_call(memory: list[int]):
 
 def calculate_location_addr(vm: VM) -> int:
     '''Identify the memory addresss which stores the VM's current location'''
+
+    # FIXME: this cannot be called from anywhere (func expects starting loc)
+    desc = vm.clone().flush().sendcopy('look').read()
+    assert 'Definitely no treasure within!' in desc, 'Unexpected location for location address calculation'
 
     vm1 = vm.clone().run()
     vm2 = vm.clone().sendcopy('doorway')
