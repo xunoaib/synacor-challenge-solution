@@ -2,44 +2,75 @@
 
 This repository contains my solution (and related files) for the [Synacor Challenge](https://github.com/xunoaib/synacor-challenge)
 
-# ⚠️ Warning! Spoilers Ahead! ⚠️
+---
+
+## ⚠️ Warning! Spoilers Ahead! ⚠️
 
 ## Consider looking away if you have not already completed this challenge!
 
-Synacor can only be completed once and is easily spoilable!
+## Synacor can only be completed once and is easily spoilable!
+
+---
+
+# Files
+
+Core:
+- [basevm.py](basevm.py) -- Base emulator implementing core VM functionality.
+- [vm.py](vm.py) -- Enhanced emulator with extra features / debug commands.
+- [run.py](run.py) -- Launches an interactive VM from a binary.
+
+Solvers:
+- [solve_all.py](solve_all.py) -- Executes an end-to-end solution for a given binary, printing all codes found.
+- [solve_coins.py](solve_coins.py) -- Solves the ruins coin puzzle.
+- [solve_teleporter.py](solve_teleporter.py) -- Solves the teleporter puzzle (Python).
+- [solve_teleporter.c](solve_teleporter.c) -- Solves the teleporter puzzle (C).
+- [solve_vault.py](solve_vault.py) -- Solves the vault puzzle.
+
+Extras:
+- [disassembler.py](disassembler.py) -- Disassembles a binary
+- [plot_maps.py](plot_maps.py) -- Renders graph-based HTML/PNG visualizations of the game world (called by solve_all.py)
+- [maps/](maps) -- Contains rendered HTML/PNG maps (HTML best viewed in a browser)
 
 # Objective
 
-The challenge contains eight unique codes, each found from the following sources:
+The challenge contains eight unique codes, each found by completing the following puzzles:
 
-- Code 1: Found in `arch-spec`
-- Code 2: VM pre-self-test
-- Code 3: VM post-self-test
-- Code 4: Tablet
-- Code 5: Twisty Maze
-- Code 6: Coins Puzzle ([solve_coins.py](solve_coins.py))
-- Code 7: Teleporter ([solve_teleporter.py](solve_teleporter.py) / [solve_teleporter.c](solve_teleporter.c))
-- Code 8: Vault Puzzle ([solve_vault.py](solve_vault.py))
+- **Code 1:** Found in `arch-spec`
+- **Code 2:** VM pre-self-test
+- **Code 3:** VM post-self-test
+- **Code 4:** Tablet
+- **Code 5:** Twisty Maze
+- **Code 6:** [Coins](solve_coins.py)
+- **Code 7:** Teleporter ([Python](solve_teleporter.py) / [C](solve_teleporter.c))
+- **Code 8:** [Vault](solve_vault.py)
 
 # Codes
 
 ## Code 1: Architecture Spec
 
-The first code is found in the hints section of the VM architecture spec (`arch-spec`). Amusingly, this was the last code I found.
+The first code is found in the hints section of the VM architecture spec
+(`arch-spec`). Amusingly, this was the last code I found.
 
 ## Code 2: Pre-Self-Test Code
 
-Implementing the `out` and `noop` instructions, then running the binary, will reveal the pre-self-test code.
+Running the binary after implementing the `out` and `noop` instructions reveals
+the pre-self-test code.
 
 ## Code 3: Post-Self-Test Code
 
-Implementing the remaining VM instructions will allow the self-test to complete and reveal the next code.
+Implementing the remaining VM instructions will allow the self-test to
+complete, revealing the next code.
 
-Now that all instructions have been implemented, it seems we've been dropped into a text-adventure game!
+Now that all instructions have been implemented, it seems we've been dropped
+into a text-adventure game!
 
 ## Code 4: Tablet
 
-Once the self-test completes, immediately type `take tablet` and `use tablet` to reveal the next code.
+Once the self-test completes, immediately type `take tablet` and `use tablet`
+to receive the next code.
+
+Note: For later puzzles, be sure to also collect the `empty lantern` from the
+easternmost moss cavern.
 
 ## Code 5: Twisty Maze
 
@@ -47,26 +78,27 @@ Explore the area to reveal a ladder leading to twisty passages. The maze seems
 unpredictable, with different exits leading to unexpected locations. However,
 the maze is quite deterministic and can be easily mapped out by recording your
 current location, moving in a direction, and then recording your new location.
-Each location has a similar but slightly different description which uniquely
-identifies it.
+Each location has a similar but slightly different description which can be
+used to uniquely identify it.
 
 You'll eventually discover a passage with a code chiseled on the wall (and a
-can of oil, which you should `take`). This code will only be correct if you
-have arrived at the location using in-game commands (no cheating). Using
-location hacks (i.e. by modifying memory) will cause an invalid code to appear.
+can of oil, which you should `take`). Interestingly, this code will only be
+correct if you have arrived at the location using in-game commands (no
+cheating). Using location hacks (i.e. by modifying memory) will cause an
+invalid code to appear.
 
-Below is a visualization of the maze, with the rightmost red node representing
-the goal containing the code and can of oil.
+Below is a visualization of the maze. The rightmost red node has the code and
+can of oil.
 
 ![](maps/twisty_maze_crop.png)
 
 Once you have the `can` and `empty lantern`, refuel and light your lantern
-(with `use can` and `use lantern`). You can now safely navigate the dark
-passage to the ruins.
+(`use can` and `use lantern`). You can now safely navigate the dark passage to
+the ruins.
 
 ## Code 6: Coins Puzzle
 
-Navigating to the central hall reveals a puzzle with circular slots and symbols:
+Entering the central hall reveals a puzzle with circular slots and symbols:
 
     _ + _ * _^2 + _^3 - _ = 399
 
@@ -86,8 +118,8 @@ sheer mental reasoning:
 
     9 + 2 * 5^2 + 7^3 - 3 = 399
 
-Return to the central hall and insert the coins in the correct order from left
-to right:
+Return to the central hall and insert the coins corresponding to each value in
+left-to-right order:
 
 ```
 use blue coin
@@ -158,7 +190,7 @@ Of course, since teleportation is impossible, this is all totally ridiculous.
 </details>
 
 This tells us that we must write a specific value to the eighth register before
-using the teleporter again, and that we may need to optimize the
+using the teleporter again, and that we may also need to optimize the
 underlying code somehow.
 
 For now, we can assign an arbitrary value to the eighth register and use the
@@ -181,7 +213,7 @@ To see what our VM is doing, we can print the address and disassembly of each
 instruction as it's being executed. Inspecting the output, we notice an
 excessive number of repeating calls to a function at address 6027 (the `call
 6027` instruction). Here's a live log of the instructions being executed,
-starting right before the first call to this function. For clarify, each call
+starting right before the first call to this function. For clarity, each call
 to 6027 is marked with a 👈.
 
 **Live Instruction Trace:**
@@ -254,7 +286,7 @@ be more helpful to analyze a static disassembly of this function (at address
 
 **Disassembled Function (6027) (as it appears in memory)**:
 ```
-6027  jt r0 6035
+6027  jt r0 6035 👈 (entrypoint of function)
 6030  add r0 r1 1
 6034  ret
 6035  jt r1 6048
@@ -573,7 +605,7 @@ vault
 
 As we approach the vault door, the number on the vault door flashes white! The
 hourglass is still running! It flashes white! We hear a click from the vault
-door. The orb evaporates out of our ands.
+door. The orb evaporates out of our hands.
 
 We enter the vault, take the mirror, then use the mirror:
 
