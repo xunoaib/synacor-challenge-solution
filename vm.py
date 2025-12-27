@@ -200,11 +200,6 @@ def debug_cmd(vm: VM, cmd: str):
                 vm2 = vm.from_snapshot_file(SNAPSHOTS_DIR / fnames[0])
             __import__('pprint').pprint(diff_vms(vm1, vm2))
 
-        case ['giveall']:
-            # give all known items (note: these addrs vary between binaries)
-            for addr in range(2670, 2734 + 1, 4):
-                vm.memory[addr] = 0
-
         # write value to the STACK at address (0 = the bottom)
         case ['ws', addr, val]:
             vm.stack[int(addr)] = int(val)
@@ -231,10 +226,6 @@ def debug_cmd(vm: VM, cmd: str):
             nbytes = int(nbytes[0] or 1)
             print(vm.stack[addr:addr + nbytes])
 
-        case ['pinv']:
-            for addr in range(2670, 2734 + 1, 4):
-                print(addr, vm.memory[addr:addr + 4])
-
         case ['loc']:
             print(vm.location)
 
@@ -250,18 +241,6 @@ def debug_cmd(vm: VM, cmd: str):
 
         case ['dis', lines, addr]:
             disassemble(vm.memory, int(addr), int(lines))
-
-        case ['solve', 'coins']:
-            coins = [
-                'blue coin',
-                'red coin',
-                'shiny coin',
-                'concave coin',
-                'corroded coin',
-            ]
-            for coin in coins:
-                vm.send('use ' + coin)
-            vm.run()
 
         case ['macro', fname]:
             fname = Path('macros') / fname
