@@ -649,14 +649,26 @@ intervals.
 The [maps](maps/) directory contains visualizations of accessible locations
 at each stage of the challenge, as new areas are unlocked.
 
+**1. Initial Exploration (no items)**
+
 ![](maps/images/map0.html.png)
+
+**2. After Lighting Lantern**
 
 ![](maps/images/map1.html.png)
 
+**3. After Solving Coins Puzzle**
+
 ![](maps/images/map2.html.png)
+
+**4. After First Teleportation**
 
 ![](maps/images/map3.html.png)
 
+**5. After Second Teleportation**
+
 ![](maps/images/map4.html.png)
+
+**6. After Unlocking Vault**
 
 ![](maps/images/map5.html.png)
