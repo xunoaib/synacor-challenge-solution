@@ -6,8 +6,8 @@ from itertools import zip_longest
 from pathlib import Path
 from typing import TypedDict, override
 
-from basevm import BaseVM, Registers
-from disassembler import disassemble
+from basevm import BaseVM, Registers, read_instruction
+from disassembler import disassemble, format_instruction_plain
 
 ALIASES = {
     'l': 'look',
@@ -41,10 +41,12 @@ class VM(BaseVM):
         super().__init__(*args, **kwargs)
         self.location_addr = None
         self.teleport_call_addr = None
+        self.tracing = False
 
     def interactive(self):
         try:
             while True:
+                self.live_output = True
                 self.run()
                 print(self.read(), end='')
                 self.send(input('\033[93;1mdbg>\033[0m '))
@@ -105,6 +107,10 @@ class VM(BaseVM):
 
     @override
     def execute(self, opcode, args):
+        if self.tracing:
+            opcode, args = read_instruction(self.memory, self.pc)
+            print(self.pc, format_instruction_plain(opcode, args))
+
         # skip slow call but set the proper post-exec values
         if opcode.name == 'call' and args[0] == self.teleport_call_addr:
             self.pc += len(opcode)
