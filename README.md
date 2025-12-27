@@ -12,6 +12,32 @@ This repository contains my solution (and related files) for the [Synacor Challe
 
 ---
 
+# Table of Contents
+
+- [Files](#files)
+- [Objective](#objective)
+- [Codes](#codes)
+  - [Code 1: Architecture Spec](#code-1-architecture-spec)
+  - [Code 2: Pre-Self-Test Code](#code-2-pre-self-test-code)
+  - [Code 3: Post-Self-Test Code](#code-3-post-self-test-code)
+  - [Code 4: Tablet](#code-4-tablet)
+  - [Code 5: Twisty Maze](#code-5-twisty-maze)
+  - [Code 6: Coins Puzzle](#code-6-coins-puzzle)
+  - [Code 7: Teleporter](#code-7-teleporter)
+    - [Disassembling the Teleporter Call](#disassembling-the-teleporter-call)
+    - [Analyzing the Teleporter Call Site](#analyzing-the-teleporter-call-site)
+    - [Analyzing the Teleporter Call](#analyzing-the-teleporter-call)
+    - [Optimizing the Teleporter Call](#optimizing-the-teleporter-call)
+    - [Patching the Teleporter Call](#patching-the-teleporter-call)
+  - [Code 8: Vault Puzzle](#code-8-vault-puzzle)
+- [Extras](#extras)
+  - [Debug Commands](#debug-commands)
+  - [Self-Test Decryption](#self-test-decryption)
+  - [Memory Hacking](#memory-hacking)
+  - [Map Visualizations](#map-visualizations)
+
+---
+
 # Files
 
 Core:
