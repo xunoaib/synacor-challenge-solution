@@ -103,9 +103,7 @@ def disassemble_lines(
                     next_addr += len(opcode)
                 args = (outstring, )
 
-            results.append(
-                f"{curaddr:>05x}  {format_instruction(opcode, args)}"
-            )
+            results.append(f"{curaddr:>5}  {format_instruction(opcode, args)}")
             addr += len(opcode)
             lines -= 1
 
@@ -115,7 +113,7 @@ def disassemble_lines(
                 val = repr(chr(val)) + f' [{val}]'
             else:
                 val = f'[{val}]'
-            results.append(f'{addr:>05x}  err {val}')
+            results.append(f'{addr:>5}  err {val}')
             addr += 1
 
     return results
