@@ -126,12 +126,7 @@ def solve_all(
     yield print_code(8, reflect(m.group(1)))
 
     edges, vm, descs, known_locs = find_and_collect_all(vm, known_locs)
-    plot and plot(edges, descs, 'map5')
-
-    if not plot:
-        print('\033[95mNOTE: Skipped writing maps to HTML/PNG.\n\033[0m')
-
-    vm.interactive()
+    plot(edges, descs, 'map5')
 
 
 def find_and_collect_all(vm: VM, known_locs: dict[int, VM]):
