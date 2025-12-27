@@ -43,16 +43,6 @@ class VM(BaseVM):
         self.teleport_call_addr = None
         self.tracing = False
 
-    def interactive(self):
-        try:
-            while True:
-                self.live_output = True
-                self.run()
-                print(self.read(), end='')
-                self.send(input('\033[93;1mdbg>\033[0m '))
-        except EOFError:
-            pass
-
     # =================
     # Location Tracking
     # =================

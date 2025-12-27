@@ -88,6 +88,7 @@ class BaseVM:
         self.pc: int = 0
         self.input: list[str] = []
         self.output: str = ''
+        self.live_output: bool = False
 
         if binfile:
             self.memory = load_bytecode(binfile)
@@ -112,9 +113,22 @@ class BaseVM:
         self.read()
         return self
 
+    def interactive(self):
+        try:
+            self.live_output = True
+            while True:
+                self.run()
+                print(self.read(), end='')
+                self.send(input('\033[93;1mdbg>\033[0m '))
+        except EOFError:
+            pass
+        finally:
+            self.live_output = False
+
     def run(self):
         while self.step():
-            pass
+            if self.live_output:
+                print(self.read(), flush=True, end='')
         return self
 
     def step(self) -> bool:
