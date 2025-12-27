@@ -1,6 +1,5 @@
 import sys
 from dataclasses import dataclass
-from heapq import heappop, heappush
 from itertools import pairwise
 
 GRID_LIST = [
@@ -60,13 +59,13 @@ def solve(
     assert isinstance(start_val, int), f'Invalid starting value: {start_val}'
 
     state = State(start_pos, start_val)
-    q = [(0, state)]
+    q = [state]
     parent = {}
     iterations = 0
 
     while q:
         iterations += 1
-        moves, state = heappop(q)
+        state = q.pop(0)
 
         if state.value == goal_val and state.pos == goal_pos:
             break
@@ -82,7 +81,7 @@ def solve(
 
             if next_state not in parent:
                 parent[next_state] = state
-                heappush(q, (moves + 1, next_state))
+                q.append(next_state)
 
     # reconstruct solution
     solution = [state]
