@@ -28,6 +28,7 @@ This repository contains my solution (and related files) for the [Synacor Challe
     - [Analyzing the Teleporter Call Site](#analyzing-the-teleporter-call-site)
     - [Analyzing the Teleporter Call](#analyzing-the-teleporter-call)
     - [Optimizing the Teleporter Call](#optimizing-the-teleporter-call)
+      - [Algorithm Analysis](#algorithm-analysis)
     - [Patching the Teleporter Call](#patching-the-teleporter-call)
   - [Code 8: Vault Puzzle](#code-8-vault-puzzle)
 - [Extras](#extras)
@@ -48,8 +49,9 @@ Core:
 Solvers:
 - [solve_all.py](solve_all.py) -- Executes an end-to-end solution for a given binary, printing all codes found.
 - [solve_coins.py](solve_coins.py) -- Solves the ruins coin puzzle.
-- [solve_teleporter.py](solve_teleporter.py) -- Solves the teleporter puzzle (Python).
-- [solve_teleporter.c](solve_teleporter.c) -- Solves the teleporter puzzle (C).
+- [solve_teleporter_pure_memo.c](solve_teleporter_pure_memo.c) -- Solves the teleporter puzzle with pure memoization, no other optimizations (C).
+- [solve_teleporter.py](solve_teleporter.py) -- Solves the teleporter puzzle after simplification (Python).
+- [solve_teleporter.c](solve_teleporter.c) -- Solves the teleporter puzzlle after simplification (C).
 - [solve_vault.py](solve_vault.py) -- Solves the vault puzzle.
 
 Extras:
@@ -420,52 +422,123 @@ complexity of this function, but we know we have to optimize it!
 
 ### Optimizing the Teleporter Call
 
-We can begin to untangle the recurrence with a bit of substitution and dynamic
-programming. Here are my original notes, and please forgive the limited
-annotations:
+To speed up computation of this function, we can apply
+[memoization](https://en.wikipedia.org/wiki/Memoization). This approach
+dramatically improves performance by caching the results of many potentially
+expensive and redundant function calls. Now equipped with a more efficient way
+to execute this function, bruteforcing all values for r7 between 0 and 32768
+becomes much more feasible (searching for one which returns 6, our expected
+output). In a suitable programming language (such as C), memoization
+trivializes this calculation, requiring minimal modifications to the function
+(see [solve_teleporter_pure_memo.c](solve_teleporter_pure_memo.c)).
 
-```
-Known Inputs:
+Unfortunately, Python is not one of these languages (with the equivalent
+implementation still exceeding my increased recursion limit, even with
+memoization), so further optimization is required for this to work in Python.
 
-  r0 = 4
-  r1 = 1
-  r7 = ?
+#### Algorithm Analysis
 
-Expected output:
+Python's poor performance here is somewhat of a blessing in disguise. It gives
+us an opportunity to analyze and appreciate the algorithm on a deeper level 🙂.
 
-  r0 = 6
+We can begin to untangle the recurrence with a bit of substitution. Here are my
+original notes.
 
-Induction from simple cases:
+By applying incremental substitutions to simpler, more "fundamental" instances
+of the recurrence, we can begin to construct some rules which will allow us to
+rewrite more complex calls in simpler terms. This work is shown below:
 
-  f(0, B) = B + 1
-  f(1, B) = f(0, C) + B = B + C + 1
-  f(2, B) = f(1, f(2, B-1)) = B*(C+1) + 2*C + 1
-  f(3, B) = f(2, f(3, B-1)) can't be simplified. Also note that the recursive branch goes from B to 0
-  f(3, B) depends on f(3, B-1) so we can apply DP. Recursion is impractical (~32768 max call depth)
+General Rules and Base Case(s):
 
-Working backwards from known inputs and the expected output:
+    f(0, B) = B + 1
+    f(A, 0) = f(A-1, R7)
+    f(A, B) = f(A-1, f(A, B-1))
 
-  f(4, 1) = 6
-  f(4, 1) = f(3, f(4, 0))
-          = f(3, f(3, C))
+Simplifying `f(1, B)`:
 
-Thus we will be looking for f3[f3[C]] == 6
-```
+    f(1, B) = f(0, f(1,B-1)) <- apply f(0,B) substitution
+            = f(1, B-1) + 1
+            = f(0, f(1,B-2)) + 1 <- apply f(0,B) substitution
+            = f(1, B-2) + 2
+            = f(0, f(1,B-3)) + 2 <- apply f(0,B) substitution
+            = f(1, B-3) + 3
+            = ...
+            = f(1, B-B) + B
+            = f(1, 0) + B
+            = f(0, R7) + B
+            = R7 + 1 + B
+
+    f(1, B) = R7 + 1 + B 👈
+
+Simplifying `f(2, B)`:
+
+    f(2, B) = f(1, f(2, B-1)) <- apply f(1,B) substitution
+            = R7 + 1 + f(2, B-1)
+            = R7 + 1 + f(1, f(2, B-2)) <- apply f(1,B) substitution
+            = 2*(R7 + 1) + f(2, B-2)
+            = 2*(R7 + 1) + f(1, f(2, B-3)) <- apply f(1,B) substitution
+            = 3*(R7 + 1) + f(2, B-3)
+            = ...
+            = B*(R7 + 1) + f(2, B-B)
+            = B*(R7 + 1) + f(2, 0)
+            = B*(R7 + 1) + f(1, R7) <- apply f(1,B) substitution
+            = B*(R7 + 1) + R7 + 1 + R7
+            = B*(R7 + 1) + 2*R7 + 1
+
+    f(2, B) = B*(R7 + 1) + 2*R7 + 1 👈
+
+Attempting to Simplify `f(3, B)`:
+
+    f(3, B) = f(2, f(3, B-1)) <- apply f(2,B) substitution
+            = f(3, B-1) + 2*R7 + 1
+            = f(2, f(3, B-2)) + 2*R7 + 1 <- apply f(2,B) substitution
+            = [f(3,B-2) * (R7+1)+1] + 2*R7 + 1
+            = f(3,B-2) * (R7+1) + 2*R7 + 2
+            = f(2, f(3,B-3)) * (R7+1) + 2*R7 + 2
+            = [f(3,B-3) * (R7+1) + 2*R7 + 1] * (R7+1) + 2*R7 + 2
+            = f(3,B-3) * (R7+1)^2 + 2*R7*(R7+1) + R7+1 + 2*R7 + 2
+            = f(3,B-3) * (R7+1)^2 + 2*R7*(R7+1) + 3*R7 + 3
+            = ... (gets messy)
+
+The `f(3, B)` call continues to expand with increasingly complex terms, and can
+probably be written more generally, but I decided to stop here.
+
+While `f(3, B) = f(2, f(3, B-1))` isn't so easily simplified, we notice that
+`f(3, B)` depends on `f(3, B-1)`, and so on, until `f(3, 0)`.
+
+Therefore, at worst, the maximum recursive depth here is B (32768 levels), with
+a branching factor of 1 (no real branching). This means that `f(3, B)` is
+relatively easy to compute for a given value of R7 (or even all values of R7!).
+
+Now, working backwards from the known inputs and expected output:
+
+    f(4, 1) = 6
+    f(4, 1) = f(3, f(4, 0))
+            = f(3, f(3, R7))
+
+Thus, we're looking for a value of R7 which satisfies the above expression. For
+all values of R7, we can compute `f(3, f(3, R7))` and stop when this call
+returns the expected output of 6.
 
 See [solve_teleporter.py](solve_teleporter.py) and
 [solve_teleporter.c](solve_teleporter.c) for solution code which computes the
-correct value of the eighth register: **25734**.
+correct value of the eighth register after the above simplifications.
+
+See [solve_teleporter_pure_memo.c](solve_teleporter_pure_memo.c) for my
+original solution using naive memoization.
+
+After all this work, we discover that the secret value of `r7` must be **25734**! ⭐
 
 ### Patching the Teleporter Call
 
-Great! We now know the correct input value, but writing it to `r7` is not
-enough. The function is still extremely slow; We need to skip the expensive
-calculations. Fortunately, now that we know the expected inputs and outputs of
-this function, there is no need to actually execute it. Instead, we can add VM
-logic to skip the `call 6027` instruction when encountered, and write the
-expected post-call values into the appropriate registers (`r0`, `r1` and `r7`).
-This allows us to replicate the behavior of the function without actually
-executing it.
+We now know the correct input value for `r7`, but simply writing this value to
+`r7` is not enough. The function is still extremely slow; We need to skip the
+expensive call. Fortunately, now that we know the expected inputs and outputs
+of this function, there is no need to actually execute it. Instead, we can add
+VM logic to skip the `call 6027` instruction when it is encountered, and write
+the expected post-call values into the appropriate registers (`r0`, `r1` and
+`r7`). This allows us to replicate the behavior of the function without
+actually executing it.
 
 After patching the call, we can set `r7` to the secret value 25734, then use
 the teleporter again, which brings us to a new location: the beach!
@@ -606,8 +679,12 @@ operation: 22 + 4, which produces a new value of 26. This pattern can be
 repeated to modify the value of the orb, with the goal of arriving at the upper
 right corner with a value of 30.
 
-Furthermore, an hourglass seems to force us to not only produce the correct
-answer, but produce it in **a minimal number of steps**. What fun!
+We can observe some rules:
+- The starting room (vault antechamber) can't be visited twice (orb resets).
+- The ending room (vault door) should not be visited before the puzzle is solved.
+- After a certain number of steps, the orb evaporates. This presumably forces
+us to find a solution which involves a **minimal number of steps**. What fun!
+- (Perhaps some others I've forgotten)
 
 We can apply BFS (in [solve_vault.py](solve_vault.py)) to identify the
 shortest path from the antechamber to the goal satisfying the objective:
