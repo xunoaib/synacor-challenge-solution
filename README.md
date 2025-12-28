@@ -41,6 +41,10 @@ This repository contains my solution (and related files) for the [Synacor Challe
 
 # Files
 
+Challenge Files:
+- [arch-spec](arch-spec) -- Architecture specification
+- [challenge.bin](challenge.bin) -- Challenge binary
+
 Core:
 - [basevm.py](basevm.py) -- Base emulator implementing core VM functionality.
 - [vm.py](vm.py) -- Enhanced emulator with extra features / debug commands.
