@@ -22,7 +22,6 @@ Synacor can only be completed once and is easily spoilable!
     - [Live Instruction Trace](#live-instruction-trace)
     - [Disassembling the Call Site](#disassembling-the-call-site)
     - [Disassembling the Function @ 6027](#disassembling-the-function--6027)
-    - [Analyzing the Teleporter Call Site](#analyzing-the-teleporter-call-site)
     - [Analyzing the Teleporter Call](#analyzing-the-teleporter-call)
     - [Optimizing the Teleporter Call](#optimizing-the-teleporter-call)
       - [Memoization](#memoization)
@@ -309,15 +308,29 @@ Analyzing the initial call site, we have:
 5514  call 1458
 ```
 
-Before the first call to this function, we see that the value 0 is written to
-register 4, and 1 is written to register 1. The function is then called, and
-once it returns, the VM checks if register 0 contains a value of 6, jumping to
-address 5579 if false (`r0 != 6`), or continuing to address 5498 if true (`r0
-== 6`).
+Before the first call to this function, we see that the value 4 is written to
+register 0, and 1 is written to register 1. The function at 6027 is then
+called, and once it returns, the VM checks if register 0 now contains a value
+of 6, jumping to address 5579 if false (`r0 != 6`), or continuing to address
+5498 if true (`r0 == 6`). We can infer that the truthy path is the desired path
+(where `r0 == 6`). It's omitted here, but we can confirm this by independently
+tracing each branch.
+
+Judging from this code, the output of the function is likely stored in `r0`, and
+its value is likely expected to be 6 given the observed inputs (`r0 = 4`, `r1 = 1`,
+and `r7 = ?`). However, the correct input value for the eighth register (`r7`) is
+still unknown.
+
+Our goal appears to be twofold:
+1. to find the correct value of `r7` which causes the initial function call to
+   return 6 (stored in `r0`).
+2. to ensure this function call completes in a reasonable time, before the heat
+   death of the universe.
+
 
 ### Disassembling the Function @ 6027
 
-**Disassembled Function (at address 6027):**
+Here's a complete disassembly of the function at address 6027:
 
 ```
 6027  jt r0 6035
@@ -337,19 +350,6 @@ address 5579 if false (`r0 != 6`), or continuing to address 5498 if true (`r0
 6065  call 6027
 6067  ret
 ```
-
-### Analyzing the Teleporter Call Site
-
-Judging from this code, the output of the function is likely stored in `r0`, and
-its value is likely expected to be 6 given the observed inputs (`r0 = 4`, `r1 = 1`,
-and `r7 = ?`). However, the correct input value for the eighth register (`r7`) is
-still unknown.
-
-Our goal appears to be twofold:
-1. to find the correct value of `r7` which causes the initial function call to
-   return 6 (stored in `r0`).
-2. to ensure this function call completes in a reasonable time, before the heat
-   death of the universe.
 
 ### Analyzing the Teleporter Call
 
@@ -522,7 +522,9 @@ the teleporter again, which brings us to a new location: the beach!
 
 ## Code 8: Vault Puzzle
 
-A path leads from the beach into the tropical island, a tropical cave, and then finally the vault. A journal can also be found in a tropical cave alcove along the way, containing hints for the vault puzzle:
+A path leads from the beach into the tropical island, a tropical cave, and then
+finally the vault. A journal can also be found in a tropical cave alcove along
+the way, containing hints for the vault puzzle:
 
 <details>
     <summary>🔽 look journal</summary>
