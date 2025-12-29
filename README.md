@@ -28,8 +28,8 @@ Synacor can only be completed once and is easily spoilable!
       - [Further Analysis / Simplification](#further-analysis--simplification)
     - [Patching the Teleporter Call](#patching-the-teleporter-call)
   - [Code 8: Vault Puzzle](#code-8-vault-puzzle)
-- [Extras](#extras)
-  - [Debug Commands](#debug-commands)
+- [Extra Observations, Details, and Features](#extra-observations-details-and-features)
+  - [Custom Commands](#custom-commands)
   - [Self-Test Decryption](#self-test-decryption)
   - [Memory Hacking](#memory-hacking)
   - [Map Visualizations](#map-visualizations)
@@ -69,8 +69,8 @@ The challenge contains eight unique codes, each found by completing the followin
 
 ## Code 1: Architecture Spec
 
-The first code is found in the hints section of the VM architecture spec
-(`arch-spec`). Amusingly, this was the last code I found.
+The first code appears in the hints section of the VM architecture spec
+([`arch-spec`](arch-spec)). Amusingly, this was the last code I found.
 
 ## Code 2: Pre-Self-Test Code
 
@@ -79,53 +79,58 @@ the pre-self-test code.
 
 ## Code 3: Post-Self-Test Code
 
-Implementing the remaining VM instructions will allow the self-test to
-complete, revealing the next code.
+Implementing the remaining VM instructions allows the self-test to complete,
+revealing the next code.
 
 Now that all instructions have been implemented, it seems we've been dropped
 into a text-adventure game!
 
 ## Code 4: Tablet
 
-Once the self-test completes, we type `take tablet` and `use tablet` to collect
-the next code.
+Once the self-test completes, typing `take tablet` and `use tablet` reveals the
+next code.
 
-Note: For later puzzles, we also collect the `empty lantern` from the
-easternmost moss cavern.
+Note: For later puzzles, it's also important to collect the `empty lantern`
+from the easternmost moss cavern.
 
 ## Code 5: Twisty Maze
 
-Exploring the area reveals a ladder leading to twisty passages. The maze seems
-unpredictable, with different exits leading to unexpected locations. However,
-it's quite deterministic and can be easily mapped out by recording the current
-location, moving in a direction, and then recording our new location.
-Fortunately, each location has a similar but slightly different description
-which uniquely identifies it.
+Exploring the area reveals a ladder leading to twisty passages. At first, the
+maze seems unpredictable, with different exits leading to unexpected locations.
+In reality, however, the maze is fully deterministic and can be systematically
+mapped by recording our current location, moving in a new direction, and noting
+the resulting location -- repeating this process until every area has been
+discovered. Fortunately, each location has a description that is very similar
+to the others but contains subtle differences, allowing each spot to be
+uniquely identified.
 
-We'll eventually enter a passage with a code chiseled on the wall (and a can of
-oil, which we should `take`). Interestingly, the code will only be correct if
-we have arrived here using in-game commands only (no cheating). Using location
-hacks (i.e. by modifying memory) will cause an invalid code to appear.
+Eventually, we will find a passage with a code chiseled into the wall, along
+with a can of oil, which should be taken. Notably, the code is only valid if we
+reach this location through legitimate in-game commands; using cheats or
+location hacks (such as modifying memory) will cause an incorrect code to
+appear.
 
-Below is a visualization of the maze, with the rightmost red node having the
-code and can of oil.
+Below is a visualization of the maze, with the rightmost red node indicating
+the location of the code and the can of oil. For a complete map of all
+accessible locations at each stage of the game, see the [Map
+Visualizations](#map-visualizations) section.
 
 ![](maps/twisty_maze_crop.png)
 
 
 We can now refuel and light the lantern (`use can`, then `use lantern`), and
-safely navigate the dark passage to the ruins.
+safely navigate the dark passage into the ruins.
 
 ## Code 6: Coins Puzzle
 
-Entering the central hall reveals a puzzle with circular slots and symbols:
+In the central hall, we encounter a cryptic equation featuring symbols and
+circular slots:
 
     _ + _ * _^2 + _^3 - _ = 399
 
-It appears some values must be entered to satisfy the equation.
-
-We can explore the ruins to collect five coins, each of which representing a
-different value when inspected:
+To solve it, we must place five coins into the slots in the correct order. Each
+coin can be collected from other rooms in the ruins, and examining a coin
+(`look <coin>`) reveals its numerical value:
 
 - red coin: 2 dots
 - corroded coin: triangle (3 dots)
@@ -133,13 +138,12 @@ different value when inspected:
 - concave coin: 7 dots
 - blue coin: 9 dots
 
-The solution can be found using [bruteforce/z3](solve_coins.py), or sheer
-mental reasoning:
+The correct sequence can be found using [brute-force (even z3)](solve_coins.py)
+or sheer mental reasoning:
 
     9 + 2 * 5^2 + 7^3 - 3 = 399
 
-We return to the central hall and insert the coins in their correct
-left-to-right order:
+Place the coins in the following order to unlock the north door:
 
 ```
 use blue coin
@@ -149,8 +153,8 @@ use concave coin
 use corroded coin
 ```
 
-The north door emits a click as it unlocks. We go north, take the teleporter,
-and use it. As we spiral through time and space, the next code appears in the
+A click echoes as the north door unlocks. We go north, take the teleporter,
+then use it. As we spiral through time and space, the next code appears in the
 stars!
 
 ## Code 7: Teleporter
@@ -297,7 +301,7 @@ Analyzing the initial call site, we have:
 5483  set r0 4
 5486  set r1 1
 5489  call 6027  👈 <- calls function @ 6027
-5491  eq r1 r0 6    <- checks if r0 == 6
+5491  eq r1 r0 6 ⭐ <- checks if r0 == 6
 5495  jf r1 5579    <- if above check failed (r0 != 6), jumps to 5579
 5498  push r0       <- otherwise, continues here (presumably, the "good" path)
 5500  push r1
@@ -313,8 +317,8 @@ register 0, and 1 is written to register 1. The function at 6027 is then
 called, and once it returns, the VM checks if register 0 now contains a value
 of 6, jumping to address 5579 if false (`r0 != 6`), or continuing to address
 5498 if true (`r0 == 6`). We can infer that the truthy path is the desired path
-(where `r0 == 6`). It's omitted here, but we can confirm this by independently
-tracing each branch.
+(where `r0 == 6`). We can confirm this by independently tracing each branch to
+completion, though these steps have been omitted for brevity.
 
 Judging from this code, the output of the function is likely stored in `r0`, and
 its value is likely expected to be 6 given the observed inputs (`r0 = 4`, `r1 = 1`,
@@ -322,11 +326,10 @@ and `r7 = ?`). However, the correct input value for the eighth register (`r7`) i
 still unknown.
 
 Our goal appears to be twofold:
-1. to find the correct value of `r7` which causes the initial function call to
+1. Find the correct value of `r7` which causes the initial function call to
    return 6 (stored in `r0`).
-2. to ensure this function call completes in a reasonable time, before the heat
-   death of the universe.
-
+2. Ensure this function call completes in a reasonable time (before the heat
+   death of the universe).
 
 ### Disassembling the Function @ 6027
 
@@ -382,22 +385,22 @@ To speed up execution of highly recursive functions like this (having many
 redudant subtrees), we can use
 [memoization](https://en.wikipedia.org/wiki/Memoization) to cache the result
 of each function call and avoid doing redundant work. With memoization, we can
-more easily bruteforce input values of `r7` for this function (between 0 and
+more easily brute-force input values of `r7` for this function (between 0 and
 32768), searching for one which returns the expected output: 6.
 
 This can be easily implemented in C or Java with a sufficiently large stack:
 [solve_teleporter_pure_memo.c](solve_teleporter_pure_memo.c), where the
-solution can be found in roughly 10 seconds.
+solution can be found in roughly 10 seconds on my hardware.
 
 #### Further Analysis / Simplification
 
-However, I'm a man of Python, and naively caching recursive calls turns out not
-to be ideal here. Even with `functools.cache` and an increased recursion limit,
-Python still hits a `RecursionError` for deeper invocations of the function.
-Manual memoization avoids this issue, but the resulting performance iss
-**extremely** slow (~75 function calls per second). At that rate, brute-forcing
-all 32,768 possible values of r7 would take about 7 minutes -- doable, but
-unpleasant).
+However, I'm a man of Python, and in Python, naively caching recursive calls
+turns out not to be ideal here. Even with `functools.cache` and an increased
+recursion limit, Python still hits a `RecursionError` for deeper invocations of
+the function. Manual memoization avoids this issue, but the resulting
+performance is **extremely** slow (~75 function calls per second). At that
+rate, brute-forcing all 32,768 possible values of `r7` would take about 7
+minutes -- doable, but unpleasant.
 
 Rather than waiting, this gives us an opportunity to look inside the recurrence
 and simplify its structure.
@@ -406,7 +409,7 @@ By progressively substituting simpler forms into more complex calls, we can
 identify patterns that let us rewrite and compress the computation. The
 following identities summarize the recurrence at its most fundamental level:
 
-Base and general recurrence:
+**Base and general recurrence:**
 
     f(0, B) = B + 1
     f(A, 0) = f(A-1, R7)
@@ -423,8 +426,10 @@ Repeatedly applying the base case `f(0, B) = B + 1` allows us to unroll the recu
             = f(0, f(1,B-3)) + 2
             = f(1, B-3) + 3
             = ...
+            = f(1, B-n) + n
+            = ...
             = f(1, B-B) + B
-            = f(1, 0) + B
+            = f(1, 0) + B  <- matches f(A, 0) case
             = f(0, R7) + B
             = R7 + 1 + B
 
@@ -446,8 +451,10 @@ Substituting the `f(1, X)` rule back into the recurrence:
             = 2*(R7 + 1) + f(1, f(2, B-3))
             = 3*(R7 + 1) + f(2, B-3)
             = ...
+            = n*(R7 + 1) + f(2, B-n)
+            = ...
             = B*(R7 + 1) + f(2, B-B)
-            = B*(R7 + 1) + f(2, 0)
+            = B*(R7 + 1) + f(2, 0)   matches f(A, 0) case
             = B*(R7 + 1) + f(1, R7)
             = B*(R7 + 1) + R7 + 1 + R7
             = B*(R7 + 1) + 2*R7 + 1
@@ -460,9 +467,9 @@ So:
 
 Applying the same approach to `f(3, B)` quickly becomes cumbersome:
 
-    f(3, B) = f(2, f(3, B-1)) <- apply f(2,B) substitution
+    f(3, B) = f(2, f(3, B-1))  <- matches f(2, B) case
             = f(3, B-1) + 2*R7 + 1
-            = f(2, f(3, B-2)) + 2*R7 + 1 <- apply f(2,B) substitution
+            = f(2, f(3, B-2)) + 2*R7 + 1  <- matches f(2, B) case
             = [f(3,B-2) * (R7+1)+1] + 2*R7 + 1
             = f(3,B-2) * (R7+1) + 2*R7 + 2
             = f(2, f(3,B-3)) * (R7+1) + 2*R7 + 2
@@ -627,14 +634,19 @@ repeated to modify the value of the orb, with the goal of arriving at the upper
 right corner with a value of 30.
 
 We can observe some rules:
-- The starting room (vault antechamber) can't be visited twice (orb resets).
-- The ending room (vault door) should not be visited before the puzzle is solved.
-- After a certain number of steps, the orb evaporates. This presumably forces
-us to find a solution which involves a **minimal number of steps**. What fun!
-- (Perhaps some others I've forgotten)
+- The orb disappears if its value would become negative.
+- The starting room (vault antechamber) can't be visited twice (the orb
+resets).
+- The ending room (vault door) can't be visited before the puzzle is solved.
+- After a certain number of steps, the orb evaporates. This forces us to find a
+solution which uses a **minimal number of steps**. What fun!
 
-We can apply BFS (in [solve_vault.py](solve_vault.py)) to identify the
-shortest path from the antechamber to the goal satisfying the objective:
+**Optional:** By inspecting memory, we can also find that the orb's value is
+stored at memory address `3952` (which differs across binaries).
+
+To identify the shortest path from the antechamber to the goal, we can apply
+[BFS](https://en.wikipedia.org/wiki/Breadth-first_search) (see
+[solve_vault.py](solve_vault.py)):
 
 ```
 take orb
@@ -669,9 +681,9 @@ message is likely mirrored. Most of the letters are symmetrical, except for a
 few which must be flipped (`p`/`q`, `b`/`d`, etc). After making these
 adjustments, we submit the correct and final code!
 
-# Extras
+# Extra Observations, Details, and Features
 
-## Debug Commands
+## Custom Commands
 
 The [vm.py](vm.py) and [basevm.py](basevm.py) files provide the primary APIs through which a VM can be created and manipulated.
 
@@ -710,7 +722,6 @@ While mostly unnecessary, it's possible to inspect and manipulate some data in
 memory, for example, to change the current player's location, modify inventory,
 and retrieve plaintext strings from memory. However, be warned: the VM protects
 against some memory hacks by corrupting codes which are not obtained "legally".
-That said, inventory items appear to be unaffected.
 
 The current location, and whether each item is present in the player's
 inventory, are stored in specific memory addresses which vary across binaries.
@@ -725,6 +736,33 @@ If an item is present in the user's inventory, its value in memory will be 0.
 For example, after running the self test, typing `.wm 2670 0` will give the
 player a tablet. As an aside, item addresses also appear to be stored at 4-byte
 intervals.
+
+Notable memory addresses:
+
+| Address | Description |
+| --- | --- |
+| 2732 | Map Location |
+| 3952 | Orb value |
+
+Item addresses (set their value to 0 to acquire the item):
+
+| Address | Description |
+| --- | --- |
+|2670 | tablet|
+|2674 | empty lantern|
+|2678 | lantern|
+|2682 | lit lantern|
+|2686 | can|
+|2690 | red coin|
+|2694 | corroded coin|
+|2698 | shiny coin|
+|2702 | concave coin|
+|2706 | blue coin|
+|2710 | teleporter|
+|2714 | business card|
+|2718 | orb|
+|2726 | strange book|
+|2730 | journal|
 
 ## Map Visualizations
 
