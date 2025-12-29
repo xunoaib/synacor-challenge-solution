@@ -2,20 +2,15 @@
 
 This repository contains my solution (and related files) for the [Synacor Challenge](https://github.com/xunoaib/synacor-challenge)
 
----
-
 ## ⚠️ Warning! Spoilers Ahead! ⚠️
 
-## Consider looking away if you have not already completed this challenge!
+Consider looking away if you have not already completed this challenge!
 
-## Synacor can only be completed once and is easily spoilable!
-
----
+Synacor can only be completed once and is easily spoilable!
 
 # Table of Contents
 
-- [Files](#files)
-- [Objective](#objective)
+- [Source Files](#source-files)
 - [Codes](#codes)
   - [Code 1: Architecture Spec](#code-1-architecture-spec)
   - [Code 2: Pre-Self-Test Code](#code-2-pre-self-test-code)
@@ -24,11 +19,14 @@ This repository contains my solution (and related files) for the [Synacor Challe
   - [Code 5: Twisty Maze](#code-5-twisty-maze)
   - [Code 6: Coins Puzzle](#code-6-coins-puzzle)
   - [Code 7: Teleporter](#code-7-teleporter)
-    - [Disassembling the Teleporter Call](#disassembling-the-teleporter-call)
+    - [Live Instruction Trace](#live-instruction-trace)
+    - [Disassembling the Call Site](#disassembling-the-call-site)
+    - [Disassembling the Function @ 6027](#disassembling-the-function--6027)
     - [Analyzing the Teleporter Call Site](#analyzing-the-teleporter-call-site)
     - [Analyzing the Teleporter Call](#analyzing-the-teleporter-call)
     - [Optimizing the Teleporter Call](#optimizing-the-teleporter-call)
-      - [Algorithm Analysis](#algorithm-analysis)
+      - [Memoization](#memoization)
+      - [Further Analysis / Simplification](#further-analysis--simplification)
     - [Patching the Teleporter Call](#patching-the-teleporter-call)
   - [Code 8: Vault Puzzle](#code-8-vault-puzzle)
 - [Extras](#extras)
@@ -37,18 +35,17 @@ This repository contains my solution (and related files) for the [Synacor Challe
   - [Memory Hacking](#memory-hacking)
   - [Map Visualizations](#map-visualizations)
 
----
-
-# Files
+# Source Files
 
 Challenge Files:
 - [arch-spec](arch-spec) -- Architecture specification
 - [challenge.bin](challenge.bin) -- Challenge binary
 
-Core:
+VM Logic:
 - [basevm.py](basevm.py) -- Base emulator implementing core VM functionality.
 - [vm.py](vm.py) -- Enhanced emulator with extra features / debug commands.
 - [run.py](run.py) -- Launches an interactive VM from a binary.
+- [disassembler.py](disassembler.py) -- Disassembles a binary.
 
 Solvers:
 - [solve_all.py](solve_all.py) -- Executes an end-to-end solution for a given binary, printing all codes found.
@@ -58,12 +55,7 @@ Solvers:
 - [solve_teleporter.c](solve_teleporter.c) -- Solves the teleporter puzzlle after simplification (C).
 - [solve_vault.py](solve_vault.py) -- Solves the vault puzzle.
 
-Extras:
-- [disassembler.py](disassembler.py) -- Disassembles a binary
-- [plot_maps.py](plot_maps.py) -- Renders graph-based HTML/PNG visualizations of the game world (called by solve_all.py)
-- [maps/](maps) -- Contains rendered HTML/PNG maps (HTML best viewed in a browser)
-
-# Objective
+# Codes
 
 The challenge contains eight unique codes, each found by completing the following puzzles:
 
@@ -71,12 +63,10 @@ The challenge contains eight unique codes, each found by completing the followin
 - **Code 2:** VM pre-self-test
 - **Code 3:** VM post-self-test
 - **Code 4:** Tablet
-- **Code 5:** Twisty Maze
-- **Code 6:** [Coins](solve_coins.py)
-- **Code 7:** Teleporter ([Python](solve_teleporter.py) / [C](solve_teleporter.c))
-- **Code 8:** [Vault](solve_vault.py)
-
-# Codes
+- **Code 5:** Twisty Passages
+- **Code 6:** Ruins Coin Puzzle
+- **Code 7:** Teleporter
+- **Code 8:** Vault
 
 ## Code 1: Architecture Spec
 
@@ -98,35 +88,34 @@ into a text-adventure game!
 
 ## Code 4: Tablet
 
-Once the self-test completes, immediately type `take tablet` and `use tablet`
-to receive the next code.
+Once the self-test completes, we type `take tablet` and `use tablet` to collect
+the next code.
 
-Note: For later puzzles, be sure to also collect the `empty lantern` from the
+Note: For later puzzles, we also collect the `empty lantern` from the
 easternmost moss cavern.
 
 ## Code 5: Twisty Maze
 
-Explore the area to reveal a ladder leading to twisty passages. The maze seems
+Exploring the area reveals a ladder leading to twisty passages. The maze seems
 unpredictable, with different exits leading to unexpected locations. However,
-the maze is quite deterministic and can be easily mapped out by recording your
-current location, moving in a direction, and then recording your new location.
-Each location has a similar but slightly different description which can be
-used to uniquely identify it.
+it's quite deterministic and can be easily mapped out by recording the current
+location, moving in a direction, and then recording our new location.
+Fortunately, each location has a similar but slightly different description
+which uniquely identifies it.
 
-You'll eventually discover a passage with a code chiseled on the wall (and a
-can of oil, which you should `take`). Interestingly, this code will only be
-correct if you have arrived at the location using in-game commands (no
-cheating). Using location hacks (i.e. by modifying memory) will cause an
-invalid code to appear.
+We'll eventually enter a passage with a code chiseled on the wall (and a can of
+oil, which we should `take`). Interestingly, the code will only be correct if
+we have arrived here using in-game commands only (no cheating). Using location
+hacks (i.e. by modifying memory) will cause an invalid code to appear.
 
-Below is a visualization of the maze. The rightmost red node has the code and
-can of oil.
+Below is a visualization of the maze, with the rightmost red node having the
+code and can of oil.
 
 ![](maps/twisty_maze_crop.png)
 
-Once you have the `can` and `empty lantern`, refuel and light your lantern
-(`use can` and `use lantern`). You can now safely navigate the dark passage to
-the ruins.
+
+We can now refuel and light the lantern (`use can`, then `use lantern`), and
+safely navigate the dark passage to the ruins.
 
 ## Code 6: Coins Puzzle
 
@@ -134,23 +123,23 @@ Entering the central hall reveals a puzzle with circular slots and symbols:
 
     _ + _ * _^2 + _^3 - _ = 399
 
-It seems we must enter some values here which satisfy the equation.
+It appears some values must be entered to satisfy the equation.
 
-We can explore the ruins to collect five coins, each of which represents a
+We can explore the ruins to collect five coins, each of which representing a
 different value when inspected:
 
 - red coin: 2 dots
-- corroded coin: triangle (3 points)
-- shiny coin: pentagon (5 points)
+- corroded coin: triangle (3 dots)
+- shiny coin: pentagon (5 dots)
 - concave coin: 7 dots
 - blue coin: 9 dots
 
-The correct solution can be found with [bruteforce, z3](solve_coins.py), or
-sheer mental reasoning:
+The solution can be found using [bruteforce/z3](solve_coins.py), or sheer
+mental reasoning:
 
     9 + 2 * 5^2 + 7^3 - 3 = 399
 
-Return to the central hall and insert the coins corresponding to each value in
+We return to the central hall and insert the coins in their correct
 left-to-right order:
 
 ```
@@ -161,21 +150,22 @@ use concave coin
 use corroded coin
 ```
 
-The north door emits a click as it unlocks. Go north, take the teleporter, and
-use it. As you spiral through time and space, the next code appears in the
+The north door emits a click as it unlocks. We go north, take the teleporter,
+and use it. As we spiral through time and space, the next code appears in the
 stars!
 
 ## Code 7: Teleporter
 
-The teleporter brings you to Synacor Headquarters, which appears to be a really
+The teleporter brings us to Synacor Headquarters, which appears to be a really
 fun place to work. The strange book here also reveals some hidden behavior of
 the teleporter:
 
 <details>
-    <summary>look strange book</summary>
+    <summary>🔽 look strange book</summary>
 
 ```
-The cover of this book subtly swirls with colors.  It is titled "A Brief Introduction to Interdimensional Physics".  It reads:
+The cover of this book subtly swirls with colors.  It is titled "A Brief
+Introduction to Interdimensional Physics".  It reads:
 
 Recent advances in interdimensional physics have produced fascinating
 predictions about the fundamentals of our universe!  For example,
@@ -218,6 +208,7 @@ anomalies should be experienced, but beware - if it is set incorrectly, the
 now-bypassed confirmation mechanism will not protect you!
 
 Of course, since teleportation is impossible, this is all totally ridiculous.
+
 ```
 </details>
 
@@ -241,6 +232,8 @@ A strange, electronic voice is projected into your mind:
 This causes the VM to hang indefinitely, and my CPU fan indicates that it's
 doing some heavy work.
 
+### Live Instruction Trace
+
 To see what our VM is doing, we can print the address and disassembly of each
 instruction as it's being executed. Inspecting the output, we notice an
 excessive number of repeating calls to a function at address 6027 (the `call
@@ -248,9 +241,11 @@ excessive number of repeating calls to a function at address 6027 (the `call
 starting right before the first call to this function. For clarity, each call
 to 6027 is marked with a 👈.
 
-**Live Instruction Trace:**
+<details>
+    <summary><strong>🔽 Live Instruction Trace:</strong></summary>
+
 ```
-<addr> <instruction>
+address | instruction
 ...
 5478 noop 
 5479 noop 
@@ -285,68 +280,27 @@ to 6027 is marked with a 👈.
 6048 push r0
 6050 add r1 r1 32767
 6054 call 6027 👈
-...
+... (continues)
 ```
+</details>
 
-### Disassembling the Teleporter Call
+### Disassembling the Call Site
 
-Given the lack of `ret` instructions after each `call 6027`, we can deduce that
-this function is recursive. In this case, instead of a live disassembly, it may
-be more helpful to analyze a static disassembly of this function (at address
-6027) and the region where it is first called (address 5489):
-
-**Disassembled Call Site (as it appears in memory)**:
-```
-5478  noop
-5479  noop
-5480  noop
-5481  noop
-5482  noop
-5483  set r0 4
-5486  set r1 1
-5489  call 6027 👈 (first call)
-5491  eq r1 r0 6
-5495  jf r1 5579
-5498  push r0
-5500  push r1
-5502  push r2
-5504  set r0 29014
-5507  set r1 1531
-5510  add r2 1816 12241
-5514  call 1458
-```
-
-**Disassembled Function (6027) (as it appears in memory)**:
-```
-6027  jt r0 6035 👈 (entrypoint of function)
-6030  add r0 r1 1
-6034  ret
-6035  jt r1 6048
-6038  add r0 r0 32767
-6042  set r1 r7
-6045  call 6027 👈
-6047  ret
-6048  push r0
-6050  add r1 r1 32767
-6054  call 6027 👈
-6056  set r1 r0
-6059  pop r0
-6061  add r0 r0 32767
-6065  call 6027 👈
-6067  ret
-```
-
-### Analyzing the Teleporter Call Site
+Given the lack of `ret` instructions after each `call 6027` in the above trace,
+we may deduce that this function is recursive. In this case, instead of a live
+disassembly, it may be more helpful to analyze a static disassembly of this
+function (at address 6027) and the region where it is first called (address
+5489):
 
 Analyzing the initial call site, we have:
 
 ```
 5483  set r0 4
 5486  set r1 1
-5489  call 6027  👈 <- function call
-5491  eq r1 r0 6    <- check if r0 == 6
-5495  jf r1 5579    <- if above check is false (r0 != 6), jump to 5579
-5498  push r0       <- otherwise, continue here (r0 == 6)
+5489  call 6027  👈 <- calls function @ 6027
+5491  eq r1 r0 6    <- checks if r0 == 6
+5495  jf r1 5579    <- if above check failed (r0 != 6), jumps to 5579
+5498  push r0       <- otherwise, continues here (presumably, the "good" path)
 5500  push r1
 5502  push r2
 5504  set r0 29014
@@ -356,11 +310,35 @@ Analyzing the initial call site, we have:
 ```
 
 Before the first call to this function, we see that the value 0 is written to
-register 4, and 1 is written to register 1.
+register 4, and 1 is written to register 1. The function is then called, and
+once it returns, the VM checks if register 0 contains a value of 6, jumping to
+address 5579 if false (`r0 != 6`), or continuing to address 5498 if true (`r0
+== 6`).
 
-The function is then called, and once it returns, the VM checks if register 0
-contains a value of 6, jumping to address 5579 if false (`r0 != 6`), or
-continuing to address 5498 if true (`r0 == 6`).
+### Disassembling the Function @ 6027
+
+**Disassembled Function (at address 6027):**
+
+```
+6027  jt r0 6035
+6030  add r0 r1 1
+6034  ret
+6035  jt r1 6048
+6038  add r0 r0 32767
+6042  set r1 r7
+6045  call 6027
+6047  ret
+6048  push r0
+6050  add r1 r1 32767
+6054  call 6027
+6056  set r1 r0
+6059  pop r0
+6061  add r0 r0 32767
+6065  call 6027
+6067  ret
+```
+
+### Analyzing the Teleporter Call Site
 
 Judging from this code, the output of the function is likely stored in `r0`, and
 its value is likely expected to be 6 given the observed inputs (`r0 = 4`, `r1 = 1`,
@@ -378,93 +356,71 @@ Our goal appears to be twofold:
 To simplify our analysis, we can rewrite the recursive 6027 function in Python:
 
 ```python
-# we can treat R7 (the eighth register) as a global constant,
+# We can treat R7 (the eighth register) as a global constant,
 # since the function never modifies it.
 
-def call_6027(r0, r1):
-    if r0 == 0:
-        return (r1 + 1) % 32768
-
-    if r1 == 0:
-        return call_6027(r0 - 1, R7)
-
-    new_r0 = r0 - 1
-    new_r1 = call_6027(r0, r1 - 1)
-    return call_6027(new_r0, new_r1)
+def f(r0, r1):
+    if r0 == 0: return (r1 + 1) % 32768
+    if r1 == 0: return f(r0 - 1, R7)
+    return f(r0 - 1, f(r0, r1 - 1))
 ```
 
-Educated readers might recognize this as the [Ackermann
+Educated readers may recognize this as a slight variation of the [Ackermann
 Function](https://en.wikipedia.org/wiki/Ackermann_function), though I did not!
 
----
-I found it difficult to meaningfully characterize this function in plain language,
-but here's my attempt:
-
-- The function accepts two input parameters: `r0` and `r1`.
-- The function has one base case when `r0 == 0`, returning `r1 + 1`.
-- When `r1 == 0`, it starts a recursive call, subtracting one from `r0` and assigning `R7` (the unknown value in the eighth register) to `r1`.
-- Otherwise, two more recursive calls are performed:
-    - In one call, `r0` is passed along as-is (becoming the `new_r0`), while `r1` is
-    decremented by 1. The result of this recursive call becomes the `new_r1`.
-    - Then, the function is called again with the `new_r0` and `new_r1`, and the result
-    is returned.
----
-
-We now begin to appreciate the time complexity of this function.
-
-- When `r0` is zero, we return `r1 + 1`
-- When `r1` is zero, we return the result of the call where `r0` is decremented
-by one and `r1` is assigned to `R7` (the eighth register).
-- When `r0` and `r1` are both nonzero, we return the result of the call where
-`r0` is decremented by one, and where `r1` is assigned to the result of the
-call where `r0` is unchanged and `r1` is decremented by one.
-
-This has an extremely high time complexity, as `r0` and `r1` are progressively
-decremented to zero and then reset to very large values, with many deep and
-redundant recursive branches. I have yet to formally compute the time
-complexity of this function, but we know we have to optimize it!
+This function is extremely recursive and has a very high time complexity.
 
 ### Optimizing the Teleporter Call
 
-To speed up computation of this function, we can apply
-[memoization](https://en.wikipedia.org/wiki/Memoization). This approach
-dramatically improves performance by caching the results of many potentially
-expensive and redundant function calls. Now equipped with a more efficient way
-to execute this function, bruteforcing all values for r7 between 0 and 32768
-becomes much more feasible (searching for one which returns 6, our expected
-output). In a suitable programming language (such as C), memoization
-trivializes this calculation, requiring minimal modifications to the function
-(see [solve_teleporter_pure_memo.c](solve_teleporter_pure_memo.c)).
+To restate our objective, based on our prior observations (the initial inputs
+of the function known to be `r0 = 4`, `r1 = 1`, and its expectation to return
+`6`), we will be looking for a value of `r7` which produces `f(4, 1) == 6`
 
-Unfortunately, Python is not one of these languages (with the equivalent
-implementation still exceeding my increased recursion limit, even with
-memoization), so further optimization is required for this to work in Python.
+#### Memoization
 
-#### Algorithm Analysis
+To speed up execution of highly recursive functions like this (having many
+redudant subtrees), we can use
+[memoization](https://en.wikipedia.org/wiki/Memoization) to cache the result
+of each function call and avoid doing redundant work. With memoization, we can
+more easily bruteforce input values of `r7` for this function (between 0 and
+32768), searching for one which returns the expected output: 6.
 
-Python's poor performance here is somewhat of a blessing in disguise. It gives
-us an opportunity to analyze and appreciate the algorithm on a deeper level 🙂.
+This can be easily implemented in C or Java with a sufficiently large stack:
+[solve_teleporter_pure_memo.c](solve_teleporter_pure_memo.c), where the
+solution can be found in roughly 10 seconds.
 
-We can begin to untangle the recurrence with a bit of substitution. Here are my
-original notes.
+#### Further Analysis / Simplification
 
-By applying incremental substitutions to simpler, more "fundamental" instances
-of the recurrence, we can begin to construct some rules which will allow us to
-rewrite more complex calls in simpler terms. This work is shown below:
+However, I'm a man of Python, and naively caching recursive calls turns out not
+to be ideal here. Even with `functools.cache` and an increased recursion limit,
+Python still hits a `RecursionError` for deeper invocations of the function.
+Manual memoization avoids this issue, but the resulting performance iss
+**extremely** slow (~75 function calls per second). At that rate, brute-forcing
+all 32,768 possible values of r7 would take about 7 minutes -- doable, but
+unpleasant).
 
-General Rules and Base Case(s):
+Rather than waiting, this gives us an opportunity to look inside the recurrence
+and simplify its structure.
+
+By progressively substituting simpler forms into more complex calls, we can
+identify patterns that let us rewrite and compress the computation. The
+following identities summarize the recurrence at its most fundamental level:
+
+Base and general recurrence:
 
     f(0, B) = B + 1
     f(A, 0) = f(A-1, R7)
     f(A, B) = f(A-1, f(A, B-1))
 
-Simplifying `f(1, B)`:
+**Simplifying `f(1, B)`**
 
-    f(1, B) = f(0, f(1,B-1)) <- apply f(0,B) substitution
+Repeatedly applying the base case `f(0, B) = B + 1` allows us to unroll the recursion:
+
+    f(1, B) = f(0, f(1,B-1))
             = f(1, B-1) + 1
-            = f(0, f(1,B-2)) + 1 <- apply f(0,B) substitution
-            = f(1, B-2) + 2
-            = f(0, f(1,B-3)) + 2 <- apply f(0,B) substitution
+            = f(0, f(1,B-2)) + 1
+            = f(1, b-2) + 2
+            = f(0, f(1,B-3)) + 2
             = f(1, B-3) + 3
             = ...
             = f(1, B-B) + B
@@ -472,26 +428,37 @@ Simplifying `f(1, B)`:
             = f(0, R7) + B
             = R7 + 1 + B
 
-    f(1, B) = R7 + 1 + B 👈
+So:
 
-Simplifying `f(2, B)`:
+    f(1, B) = R7 + 1 + B
 
-    f(2, B) = f(1, f(2, B-1)) <- apply f(1,B) substitution
+This confirms that the first level of recursion behaves like a simple linear
+function of `B`, offset by `R7 + 1`.
+
+**Simplifying `f(2, B)`**
+
+Substituting the `f(1, X)` rule back into the recurrence:
+
+    f(2, B) = f(1, f(2, B-1))
             = R7 + 1 + f(2, B-1)
-            = R7 + 1 + f(1, f(2, B-2)) <- apply f(1,B) substitution
+            = R7 + 1 + f(1, f(2, B-2))
             = 2*(R7 + 1) + f(2, B-2)
-            = 2*(R7 + 1) + f(1, f(2, B-3)) <- apply f(1,B) substitution
+            = 2*(R7 + 1) + f(1, f(2, B-3))
             = 3*(R7 + 1) + f(2, B-3)
             = ...
             = B*(R7 + 1) + f(2, B-B)
             = B*(R7 + 1) + f(2, 0)
-            = B*(R7 + 1) + f(1, R7) <- apply f(1,B) substitution
+            = B*(R7 + 1) + f(1, R7)
             = B*(R7 + 1) + R7 + 1 + R7
             = B*(R7 + 1) + 2*R7 + 1
 
-    f(2, B) = B*(R7 + 1) + 2*R7 + 1 👈
+So:
 
-Attempting to Simplify `f(3, B)`:
+    f(2, B) = B*(R7 + 1) + 2*R7 + 1
+
+**Attempting to simplify `f(3, B)`**
+
+Applying the same approach to `f(3, B)` quickly becomes cumbersome:
 
     f(3, B) = f(2, f(3, B-1)) <- apply f(2,B) substitution
             = f(3, B-1) + 2*R7 + 1
@@ -502,36 +469,37 @@ Attempting to Simplify `f(3, B)`:
             = [f(3,B-3) * (R7+1) + 2*R7 + 1] * (R7+1) + 2*R7 + 2
             = f(3,B-3) * (R7+1)^2 + 2*R7*(R7+1) + R7+1 + 2*R7 + 2
             = f(3,B-3) * (R7+1)^2 + 2*R7*(R7+1) + 3*R7 + 3
-            = ... (gets messy)
+            = ... (increasingly nested terms)
 
-The `f(3, B)` call continues to expand with increasingly complex terms, and can
-probably be written more generally, but I decided to stop here.
+While a closed form is possible, the expression grows rapidly and loses
+clarity. More importantly, we can observe a key structural property without
+finishing the algebra:
 
-While `f(3, B) = f(2, f(3, B-1))` isn't so easily simplified, we notice that
-`f(3, B)` depends on `f(3, B-1)`, and so on, until `f(3, 0)`.
+`f(3, B)` depends only on `f(3, B-1)`, rather than branching recursively. The
+depth of substitution is therefore at most `B` (<=32,768), with no exponential
+blow-up. In other words, `f(3, B)` is **computationally cheap to evaluate**, even
+across all possible values of `R7`.
 
-Therefore, at worst, the maximum recursive depth here is B (32768 levels), with
-a branching factor of 1 (no real branching). This means that `f(3, B)` is
-relatively easy to compute for a given value of R7 (or even all values of R7!).
+**Using the recurrence to solve the teleporter**
 
-Now, working backwards from the known inputs and expected output:
+With that insight, we can work backwards from the target expression:
 
     f(4, 1) = 6
     f(4, 1) = f(3, f(4, 0))
             = f(3, f(3, R7))
 
-Thus, we're looking for a value of R7 which satisfies the above expression. For
-all values of R7, we can compute `f(3, f(3, R7))` and stop when this call
-returns the expected output of 6.
+So we're looking for an `R7` such that:
+
+    f(3, f(3, R7)) == 6
+
+Since evaluating `f(3, X)` is manageable for all `X`, we can brute-force `R7`.
 
 See [solve_teleporter.py](solve_teleporter.py) and
-[solve_teleporter.c](solve_teleporter.c) for solution code which computes the
-correct value of the eighth register after the above simplifications.
+[solve_teleporter.c](solve_teleporter.c) for the simplified solver, and
+[solve_teleporter_pure_memo.c](solve_teleporter_pure_memo.c) for the original
+naive-memoization approach.
 
-See [solve_teleporter_pure_memo.c](solve_teleporter_pure_memo.c) for my
-original solution using naive memoization.
-
-After all this work, we discover that the secret value of `r7` must be **25734**! ⭐
+After all this work, the secret value of `r7` is revealed to be **25734**! ⭐
 
 ### Patching the Teleporter Call
 
@@ -550,31 +518,6 @@ the teleporter again, which brings us to a new location: the beach!
 ```
 > .wr 7 25734
 > use teleporter
-
-A strange, electronic voice is projected into your mind:
-
-"Unusual setting detected!  Starting confirmation process!  Estimated time to
-completion: 1 billion years."
-
-You wake up on a sandy beach with a slight headache.  The last thing you
-remember is activating that teleporter... but now you can't find it anywhere in
-your pack.  Someone seems to have drawn a message in the sand here:
-
-<<< code_#7 >>>
-
-It begins to rain.  The message washes away.  You take a deep breath and feel
-firmly grounded in reality as the effects of the teleportation wear off.
-
-== Beach == This is a sandy beach in a cove on some tropical island.  It is
-raining.  The ocean is to your south, and heavy foliage is to your north; the
-beach extends west and east.
-
-There are 3 exits:
-- west
-- east
-- north
-
-What do you do?
 ```
 
 ## Code 8: Vault Puzzle
@@ -582,12 +525,9 @@ What do you do?
 A path leads from the beach into the tropical island, a tropical cave, and then finally the vault. A journal can also be found in a tropical cave alcove along the way, containing hints for the vault puzzle:
 
 <details>
-    <summary>look journal</summary>
+    <summary>🔽 look journal</summary>
 
 ```
-> look journal
-
-
 Fireflies were using this dusty old journal as a resting spot until you scared
 them off.  It reads:
 
@@ -657,6 +597,7 @@ to the puzzle.  I will leave this journal here to help future adventurers,
 though I am not sure what help it will give.  Good luck!
 
 What do you do?
+
 ```
 </details>
 
