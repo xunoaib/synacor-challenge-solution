@@ -255,6 +255,9 @@ def debug_cmd(vm: VM, cmd: str):
                 )
                 vm.send(cmd)
                 print(vm.read())
+        case ['patch_teleporter']:
+            vm.patch_teleporter_call()
+            print('Patching teleporter call @', vm.teleport_call_addr)
 
         case _:
             print('unknown debug command')
