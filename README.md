@@ -51,7 +51,7 @@ Solvers:
 - [solve_coins.py](solve_coins.py) -- Solves the ruins coin puzzle.
 - [solve_teleporter_pure_memo.c](solve_teleporter_pure_memo.c) -- Solves the teleporter puzzle with pure memoization, no other optimizations (C).
 - [solve_teleporter.py](solve_teleporter.py) -- Solves the teleporter puzzle after simplification (Python).
-- [solve_teleporter.c](solve_teleporter.c) -- Solves the teleporter puzzlle after simplification (C).
+- [solve_teleporter.c](solve_teleporter.c) -- Solves the teleporter puzzle after simplification (C).
 - [solve_vault.py](solve_vault.py) -- Solves the vault puzzle.
 
 # Codes
@@ -382,7 +382,7 @@ of the function known to be `r0 = 4`, `r1 = 1`, and its expectation to return
 #### Memoization
 
 To speed up execution of highly recursive functions like this (having many
-redudant subtrees), we can use
+redundant subtrees), we can use
 [memoization](https://en.wikipedia.org/wiki/Memoization) to cache the result
 of each function call and avoid doing redundant work. With memoization, we can
 more easily brute-force input values of `r7` for this function (between 0 and
@@ -720,7 +720,7 @@ code and memory.
 
 While mostly unnecessary, it's possible to inspect and manipulate some data in
 memory, for example, to change the current player's location, modify inventory,
-and retrieve plaintext strings from memory. However, be warned: the VM protects
+and retrieve plain text strings from memory. However, be warned: the VM protects
 against some memory hacks by corrupting codes which are not obtained "legally".
 
 The current location, and whether each item is present in the player's
